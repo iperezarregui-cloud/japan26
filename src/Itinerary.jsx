@@ -1,27 +1,62 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import DayItems from './DayItems'
 
 const itineraryCities = [
-  { value: 'tokyo', label: 'Tokio', emoji: '🗼' },
-  { value: 'kyoto', label: 'Kioto', emoji: '⛩️' },
-  { value: 'osaka', label: 'Osaka', emoji: '🏯' },
+  {
+    value: 'tokyo',
+    label: 'Tokio',
+    emoji: '🗼',
+  },
+  {
+    value: 'kyoto',
+    label: 'Kioto',
+    emoji: '⛩️',
+  },
+  {
+    value: 'osaka',
+    label: 'Osaka',
+    emoji: '🏯',
+  },
+  {
+    value: 'kobe',
+    label: 'Kobe',
+    emoji: '🥩',
+  },
   {
     value: 'hiroshima',
     label: 'Hiroshima',
     emoji: '🕊️',
   },
-  { value: 'nara', label: 'Nara', emoji: '🦌' },
-  { value: 'hakone', label: 'Hakone', emoji: '🗻' },
-  { value: 'other', label: 'Otra', emoji: '📍' },
+  {
+    value: 'miyajima',
+    label: 'Miyajima',
+    emoji: '⛩️',
+  },
+  {
+    value: 'nara',
+    label: 'Nara',
+    emoji: '🦌',
+  },
+  {
+    value: 'hakone',
+    label: 'Hakone',
+    emoji: '🗻',
+  },
+  {
+    value: 'other',
+    label: 'Otra',
+    emoji: '📍',
+  },
 ]
 
 function getCityInformation(cityId) {
-  const city = itineraryCities.find(
-    (item) => item.value === cityId
+  const selectedCity = itineraryCities.find(
+    (city) => city.value === cityId
   )
 
-  if (city) {
-    return city
+  if (selectedCity) {
+    return selectedCity
   }
 
   return {
@@ -36,23 +71,36 @@ function formatTravelDate(dateValue) {
     return 'Fecha pendiente'
   }
 
-  const date = new Date(dateValue + 'T12:00:00')
+  const travelDate = new Date(
+    dateValue + 'T12:00:00'
+  )
 
   return new Intl.DateTimeFormat('es-ES', {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
-  }).format(date)
+  }).format(travelDate)
 }
 
 function Itinerary() {
   const [days, setDays] = useState([])
-  const [expandedDays, setExpandedDays] = useState([])
-  const [loadingDays, setLoadingDays] = useState(true)
-  const [savingDay, setSavingDay] = useState(false)
-  const [errorMessage, setErrorMessage] = useState('')
-  const [showDayForm, setShowDayForm] = useState(false)
-  const [editingDay, setEditingDay] = useState(null)
+  const [expandedDays, setExpandedDays] =
+    useState([])
+
+  const [loadingDays, setLoadingDays] =
+    useState(true)
+
+  const [savingDay, setSavingDay] =
+    useState(false)
+
+  const [showDayForm, setShowDayForm] =
+    useState(false)
+
+  const [editingDay, setEditingDay] =
+    useState(null)
+
+  const [errorMessage, setErrorMessage] =
+    useState('')
 
   useEffect(() => {
     loadDays()
@@ -65,10 +113,15 @@ function Itinerary() {
     const result = await supabase
       .from('itinerary_days')
       .select('*')
-      .order('day_number', { ascending: true })
+      .order('day_number', {
+        ascending: true,
+      })
 
     if (result.error) {
-      console.error(result.error)
+      console.error(
+        'Error al cargar el itinerario:',
+        result.error
+      )
 
       setErrorMessage(
         'No se pudo cargar el itinerario.'
@@ -79,7 +132,9 @@ function Itinerary() {
       setDays(loadedDays)
 
       if (loadedDays.length > 0) {
-        setExpandedDays([loadedDays[0].id])
+        setExpandedDays([
+          loadedDays[0].id,
+        ])
       }
     }
 
@@ -88,20 +143,44 @@ function Itinerary() {
 
   function toggleDay(dayId) {
     setExpandedDays((currentDays) => {
-      if (currentDays.includes(dayId)) {
+      const isExpanded =
+        currentDays.includes(dayId)
+
+      if (isExpanded) {
         return currentDays.filter(
-          (currentId) => currentId !== dayId
+          (currentDayId) =>
+            currentDayId !== dayId
         )
       }
 
-      return [...currentDays, dayId]
+      return [
+        ...currentDays,
+        dayId,
+      ]
     })
+  }
+
+  function getNextDayNumber() {
+    if (days.length === 0) {
+      return 1
+    }
+
+    const dayNumbers = days.map(
+      (day) => day.day_number
+    )
+
+    return Math.max(...dayNumbers) + 1
   }
 
   function openNewDayForm() {
     setEditingDay(null)
     setShowDayForm(true)
     setErrorMessage('')
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    })
   }
 
   function openEditDayForm(day) {
@@ -121,18 +200,6 @@ function Itinerary() {
     setErrorMessage('')
   }
 
-  function getNextDayNumber() {
-    if (days.length === 0) {
-      return 1
-    }
-
-    const dayNumbers = days.map(
-      (day) => day.day_number
-    )
-
-    return Math.max(...dayNumbers) + 1
-  }
-
   async function saveDay(event) {
     event.preventDefault()
 
@@ -147,8 +214,20 @@ function Itinerary() {
       formData.get('day_number')
     )
 
+    const travelDate = String(
+      formData.get('travel_date') || ''
+    )
+
+    const city = String(
+      formData.get('city') || ''
+    ).trim()
+
     const title = String(
       formData.get('title') || ''
+    ).trim()
+
+    const summary = String(
+      formData.get('summary') || ''
     ).trim()
 
     if (!dayNumber || !title) {
@@ -159,22 +238,12 @@ function Itinerary() {
       return
     }
 
-    const dateValue = String(
-      formData.get('travel_date') || ''
-    )
-
-    const cityValue = String(
-      formData.get('city') || ''
-    ).trim()
-
     const dayInformation = {
       day_number: dayNumber,
-      travel_date: dateValue || null,
-      city: cityValue || null,
-      title: title,
-      summary: String(
-        formData.get('summary') || ''
-      ).trim(),
+      travel_date: travelDate || null,
+      city: city || null,
+      title,
+      summary,
     }
 
     setSavingDay(true)
@@ -198,7 +267,10 @@ function Itinerary() {
     }
 
     if (result.error) {
-      console.error(result.error)
+      console.error(
+        'Error al guardar el día:',
+        result.error
+      )
 
       if (result.error.code === '23505') {
         setErrorMessage(
@@ -216,9 +288,11 @@ function Itinerary() {
 
     const savedDay = result.data
 
-    if (editingDay) {
-      setDays((currentDays) => {
-        const updatedDays = currentDays.map(
+    setDays((currentDays) => {
+      let updatedDays
+
+      if (editingDay) {
+        updatedDays = currentDays.map(
           (day) => {
             if (day.id === savedDay.id) {
               return savedDay
@@ -227,32 +301,31 @@ function Itinerary() {
             return day
           }
         )
-
-        return updatedDays.sort(
-          (first, second) =>
-            first.day_number - second.day_number
-        )
-      })
-    } else {
-      setDays((currentDays) => {
-        const updatedDays = [
+      } else {
+        updatedDays = [
           ...currentDays,
           savedDay,
         ]
+      }
 
-        return updatedDays.sort(
-          (first, second) =>
-            first.day_number - second.day_number
-        )
-      })
-    }
+      return updatedDays.sort(
+        (firstDay, secondDay) =>
+          firstDay.day_number -
+          secondDay.day_number
+      )
+    })
 
     setExpandedDays((currentDays) => {
-      if (currentDays.includes(savedDay.id)) {
+      if (
+        currentDays.includes(savedDay.id)
+      ) {
         return currentDays
       }
 
-      return [...currentDays, savedDay.id]
+      return [
+        ...currentDays,
+        savedDay.id,
+      ]
     })
 
     form.reset()
@@ -266,7 +339,7 @@ function Itinerary() {
         day.day_number +
         ': “' +
         day.title +
-        '”?'
+        '”? Todas sus líneas también se eliminarán.'
     )
 
     if (!shouldDelete) {
@@ -281,7 +354,10 @@ function Itinerary() {
       .eq('id', day.id)
 
     if (result.error) {
-      console.error(result.error)
+      console.error(
+        'Error al eliminar el día:',
+        result.error
+      )
 
       setErrorMessage(
         'No se pudo eliminar el día.'
@@ -292,13 +368,15 @@ function Itinerary() {
 
     setDays((currentDays) =>
       currentDays.filter(
-        (currentDay) => currentDay.id !== day.id
+        (currentDay) =>
+          currentDay.id !== day.id
       )
     )
 
     setExpandedDays((currentDays) =>
       currentDays.filter(
-        (currentId) => currentId !== day.id
+        (currentDayId) =>
+          currentDayId !== day.id
       )
     )
   }
@@ -308,9 +386,12 @@ function Itinerary() {
       <section className="content">
         <article className="itinerary-empty">
           <span>⏳</span>
+
           <h2>Cargando itinerario...</h2>
+
           <p>
-            Recuperando los días desde Supabase.
+            Recuperando los días guardados en
+            Supabase.
           </p>
         </article>
       </section>
@@ -321,12 +402,16 @@ function Itinerary() {
     <section className="itinerary-page">
       <div className="itinerary-heading">
         <div>
-          <p className="date">VIAJE A JAPÓN</p>
+          <p className="date">
+            VIAJE A JAPÓN
+          </p>
+
           <h2>Itinerario</h2>
 
           <p>
-            Organiza el viaje por días y despliega cada
-            jornada para consultar el detalle.
+            Organiza el viaje por días y despliega
+            cada jornada para consultar el detalle
+            horario.
           </p>
         </div>
 
@@ -360,7 +445,8 @@ function Itinerary() {
 
               <h3>
                 {editingDay
-                  ? 'Día ' + editingDay.day_number
+                  ? 'Día ' +
+                    editingDay.day_number
                   : 'Añadir al itinerario'}
               </h3>
             </div>
@@ -369,6 +455,7 @@ function Itinerary() {
               className="form-close-button"
               type="button"
               onClick={closeDayForm}
+              aria-label="Cerrar formulario"
             >
               ×
             </button>
@@ -414,7 +501,8 @@ function Itinerary() {
             <select
               name="city"
               defaultValue={
-                editingDay && editingDay.city
+                editingDay &&
+                editingDay.city
                   ? editingDay.city
                   : ''
               }
@@ -423,14 +511,17 @@ function Itinerary() {
                 Seleccionar ciudad
               </option>
 
-              {itineraryCities.map((city) => (
-                <option
-                  key={city.value}
-                  value={city.value}
-                >
-                  {city.emoji} {city.label}
-                </option>
-              ))}
+              {itineraryCities.map(
+                (cityOption) => (
+                  <option
+                    key={cityOption.value}
+                    value={cityOption.value}
+                  >
+                    {cityOption.emoji}{' '}
+                    {cityOption.label}
+                  </option>
+                )
+              )}
             </select>
           </label>
 
@@ -441,9 +532,11 @@ function Itinerary() {
               name="title"
               type="text"
               defaultValue={
-                editingDay ? editingDay.title : ''
+                editingDay
+                  ? editingDay.title
+                  : ''
               }
-              placeholder="Ej. Shibuya y Harajuku"
+              placeholder="Ej. Kobe y traslado a Hiroshima"
               required
             />
           </label>
@@ -479,7 +572,10 @@ function Itinerary() {
 
       {errorMessage && (
         <div className="auth-message error itinerary-error">
-          <strong>Ha ocurrido un problema</strong>
+          <strong>
+            Ha ocurrido un problema
+          </strong>
+
           <p>{errorMessage}</p>
         </div>
       )}
@@ -487,11 +583,14 @@ function Itinerary() {
       {days.length === 0 && (
         <article className="itinerary-empty">
           <span>🗓️</span>
-          <h2>El itinerario está vacío</h2>
+
+          <h2>
+            El itinerario está vacío
+          </h2>
 
           <p>
-            Crea el primer día para empezar a organizar
-            el viaje.
+            Crea el primer día para empezar a
+            organizar el viaje.
           </p>
 
           <button
@@ -510,7 +609,7 @@ function Itinerary() {
             const isExpanded =
               expandedDays.includes(day.id)
 
-            const city =
+            const cityInformation =
               getCityInformation(day.city)
 
             return (
@@ -525,12 +624,19 @@ function Itinerary() {
                 <button
                   className="itinerary-day-header"
                   type="button"
-                  onClick={() => toggleDay(day.id)}
-                  aria-expanded={isExpanded}
+                  onClick={() =>
+                    toggleDay(day.id)
+                  }
+                  aria-expanded={
+                    isExpanded
+                  }
                 >
                   <span className="itinerary-day-number">
                     <small>DÍA</small>
-                    <strong>{day.day_number}</strong>
+
+                    <strong>
+                      {day.day_number}
+                    </strong>
                   </span>
 
                   <span className="itinerary-day-main">
@@ -544,7 +650,8 @@ function Itinerary() {
                       <span>•</span>
 
                       <span>
-                        {city.emoji} {city.label}
+                        {cityInformation.emoji}{' '}
+                        {cityInformation.label}
                       </span>
                     </span>
 
@@ -561,7 +668,9 @@ function Itinerary() {
                   </span>
 
                   <span className="itinerary-chevron">
-                    {isExpanded ? '▲' : '▼'}
+                    {isExpanded
+                      ? '▲'
+                      : '▼'}
                   </span>
                 </button>
 
@@ -573,30 +682,9 @@ function Itinerary() {
                       </p>
                     )}
 
-                    <div className="itinerary-no-items">
-                      <span>🕒</span>
-
-                      <div>
-                        <h4>
-                          Todavía no hay líneas horarias
-                        </h4>
-
-                        <p>
-                          En el siguiente paso añadiremos
-                          actividades y transportes.
-                        </p>
-                      </div>
-                    </div>
+                    <DayItems day={day} />
 
                     <div className="itinerary-day-actions">
-                      <button
-                        className="secondary-action-button"
-                        type="button"
-                        disabled
-                      >
-                        + Añadir al día
-                      </button>
-
                       <button
                         className="edit-day-button"
                         type="button"
@@ -614,7 +702,7 @@ function Itinerary() {
                           deleteDay(day)
                         }
                       >
-                        Eliminar
+                        Eliminar día
                       </button>
                     </div>
                   </div>

@@ -263,6 +263,13 @@ function App() {
   const [checkingSession, setCheckingSession] =
     useState(true)
 
+    
+const [
+  passwordRecovery,
+  setPasswordRecovery,
+] = useState(false)
+
+
   const [activeTab, setActiveTab] =
     useState('itinerary')
 
@@ -450,29 +457,68 @@ function App() {
       (activity) => activity.done
     ).length
 
-  useEffect(() => {
-    async function loadSession() {
-      const result =
-        await supabase.auth.getSession()
-
-      setSession(result.data.session)
-      setCheckingSession(false)
-    }
-
-    loadSession()
-
-    const authListener =
-      supabase.auth.onAuthStateChange(
-        (_event, currentSession) => {
-          setSession(currentSession)
-          setCheckingSession(false)
+    useEffect(() => {
+      let mounted = true
+    
+      async function loadSession() {
+        const currentUrl = new URL(
+          window.location.href
+        )
+    
+        const hashParameters =
+          new URLSearchParams(
+            currentUrl.hash.replace('#', '')
+          )
+    
+        const recoveryType =
+          currentUrl.searchParams.get('type') ||
+          hashParameters.get('type')
+    
+        if (
+          mounted &&
+          recoveryType === 'recovery'
+        ) {
+          setPasswordRecovery(true)
         }
-      )
-
-    return () => {
-      authListener.data.subscription.unsubscribe()
-    }
-  }, [])
+    
+        const result =
+          await supabase.auth.getSession()
+    
+        if (!mounted) {
+          return
+        }
+    
+        setSession(result.data.session)
+        setCheckingSession(false)
+      }
+    
+      loadSession()
+    
+      const authListener =
+        supabase.auth.onAuthStateChange(
+          (event, currentSession) => {
+            if (!mounted) {
+              return
+            }
+    
+            if (event === 'PASSWORD_RECOVERY') {
+              setPasswordRecovery(true)
+            }
+    
+            if (event === 'SIGNED_OUT') {
+              setPasswordRecovery(false)
+            }
+    
+            setSession(currentSession)
+            setCheckingSession(false)
+          }
+        )
+    
+      return () => {
+        mounted = false
+        authListener.data.subscription.unsubscribe()
+      }
+    }, [])
 
   useEffect(() => {
     if (session) {
@@ -538,7 +584,15 @@ function App() {
 
     setLoadingActivities(false)
   }
-
+  function finishPasswordRecovery() {
+    setPasswordRecovery(false)
+  
+    window.history.replaceState(
+      {},
+      document.title,
+      window.location.origin
+    )
+  }
   async function handleLogout() {
     const shouldLogout = window.confirm(
       '¿Quieres cerrar la sesión?'
@@ -871,6 +925,21 @@ function App() {
         <p>Cargando Japan26...</p>
       </main>
     )
+  }
+  
+  if (passwordRecovery) {
+    return (
+      <Auth
+        initialMode="update-password"
+        onPasswordUpdated={
+          finishPasswordRecovery
+        }
+      />
+    )
+  }
+  
+  if (!session) {
+    return <Auth />
   }
 
   if (!session) {

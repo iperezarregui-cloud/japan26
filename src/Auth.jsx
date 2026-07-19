@@ -1,46 +1,65 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 
-function Auth() {
-  const [mode, setMode] = useState('login')
+function Auth({
+  initialMode = 'login',
+  onPasswordUpdated,
+}) {
+  const [mode, setMode] =
+    useState(initialMode)
 
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] =
+    useState('')
+
+  const [password, setPassword] =
+    useState('')
+
   const [newPassword, setNewPassword] =
     useState('')
-  const [confirmPassword, setConfirmPassword] =
-    useState('')
 
-  const [showPassword, setShowPassword] =
+  const [
+    confirmPassword,
+    setConfirmPassword,
+  ] = useState('')
+
+  const [
+    showPassword,
+    setShowPassword,
+  ] = useState(false)
+
+  const [loading, setLoading] =
     useState(false)
 
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
-  const [errorMessage, setErrorMessage] =
+  const [message, setMessage] =
     useState('')
 
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState('')
+
   useEffect(() => {
-    /*
-     * Supabase emite PASSWORD_RECOVERY cuando
-     * se abre el enlace de recuperación.
-     */
+    setMode(initialMode)
+  }, [initialMode])
+
+  useEffect(() => {
     const authListener =
       supabase.auth.onAuthStateChange(
         (event) => {
-          if (event === 'PASSWORD_RECOVERY') {
+          if (
+            event === 'PASSWORD_RECOVERY'
+          ) {
             setMode('update-password')
+
             setMessage(
-              'Introduce la nueva contraseña para completar la recuperación.'
+              'Introduce una nueva contraseña para completar la recuperación.'
             )
+
             setErrorMessage('')
           }
         }
       )
 
-    /*
-     * Comprobación adicional para enlaces de recuperación
-     * que incluyan type=recovery en la URL.
-     */
     const currentUrl = new URL(
       window.location.href
     )
@@ -56,9 +75,12 @@ function Auth() {
 
     if (recoveryType === 'recovery') {
       setMode('update-password')
+
       setMessage(
-        'Introduce la nueva contraseña para completar la recuperación.'
+        'Introduce una nueva contraseña para completar la recuperación.'
       )
+
+      setErrorMessage('')
     }
 
     return () => {
@@ -99,10 +121,14 @@ function Auth() {
     const normalizedEmail =
       email.trim().toLowerCase()
 
-    if (!normalizedEmail || !password) {
+    if (
+      !normalizedEmail ||
+      !password
+    ) {
       setErrorMessage(
         'Introduce el correo y la contraseña.'
       )
+
       return
     }
 
@@ -143,6 +169,7 @@ function Auth() {
       setErrorMessage(
         'Introduce tu correo electrónico.'
       )
+
       return
     }
 
@@ -163,7 +190,7 @@ function Auth() {
 
     if (result.error) {
       console.error(
-        'Error al enviar recuperación:',
+        'Error al enviar la recuperación:',
         result.error
       )
 
@@ -179,7 +206,9 @@ function Auth() {
     setLoading(false)
   }
 
-  async function handleUpdatePassword(event) {
+  async function handleUpdatePassword(
+    event
+  ) {
     event.preventDefault()
 
     if (loading) {
@@ -190,18 +219,42 @@ function Auth() {
       setErrorMessage(
         'La contraseña debe tener al menos 8 caracteres.'
       )
+
       return
     }
 
-    if (newPassword !== confirmPassword) {
+    if (
+      newPassword !== confirmPassword
+    ) {
       setErrorMessage(
         'Las dos contraseñas no coinciden.'
       )
+
       return
     }
 
     setLoading(true)
     clearMessages()
+
+    const sessionResult =
+      await supabase.auth.getSession()
+
+    if (
+      sessionResult.error ||
+      !sessionResult.data.session
+    ) {
+      console.error(
+        'No existe sesión de recuperación:',
+        sessionResult.error
+      )
+
+      setErrorMessage(
+        'El enlace de recuperación ha caducado o ya se ha utilizado. Solicita uno nuevo.'
+      )
+
+      setLoading(false)
+      return
+    }
 
     const result =
       await supabase.auth.updateUser({
@@ -210,7 +263,7 @@ function Auth() {
 
     if (result.error) {
       console.error(
-        'Error al actualizar contraseña:',
+        'Error al actualizar la contraseña:',
         result.error
       )
 
@@ -227,11 +280,6 @@ function Auth() {
     setConfirmPassword('')
     setShowPassword(false)
 
-    /*
-     * Cerramos la sesión creada por el enlace de recuperación.
-     * Así podrás iniciar sesión posteriormente tanto en Safari
-     * como dentro de la PWA con correo y contraseña.
-     */
     await supabase.auth.signOut()
 
     window.history.replaceState(
@@ -241,16 +289,24 @@ function Auth() {
     )
 
     setMode('login')
+
     setMessage(
       'Contraseña guardada. Ya puedes entrar con tu correo y contraseña.'
     )
+
     setLoading(false)
+
+    if (onPasswordUpdated) {
+      onPasswordUpdated()
+    }
   }
 
   return (
     <main className="auth-page">
       <section className="auth-card">
-        <span className="auth-flag">🇯🇵</span>
+        <span className="auth-flag">
+          🇯🇵
+        </span>
 
         <p className="eyebrow">
           MI VIAJE
@@ -312,7 +368,8 @@ function Auth() {
                     type="button"
                     onClick={() =>
                       setShowPassword(
-                        (current) => !current
+                        (currentValue) =>
+                          !currentValue
                       )
                     }
                     aria-label={
@@ -412,7 +469,9 @@ function Auth() {
 
             <form
               className="auth-form"
-              onSubmit={handleUpdatePassword}
+              onSubmit={
+                handleUpdatePassword
+              }
             >
               <label>
                 Nueva contraseña
@@ -440,8 +499,14 @@ function Auth() {
                     type="button"
                     onClick={() =>
                       setShowPassword(
-                        (current) => !current
+                        (currentValue) =>
+                          !currentValue
                       )
+                    }
+                    aria-label={
+                      showPassword
+                        ? 'Ocultar contraseña'
+                        : 'Mostrar contraseña'
                     }
                   >
                     {showPassword

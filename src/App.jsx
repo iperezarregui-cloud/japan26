@@ -747,6 +747,9 @@ const [
       link: String(
         formData.get('link') || ''
       ).trim(),
+      tiktok_link: String(
+        formData.get('tiktok_link') || ''
+      ).trim(),
       category:
         String(
           formData.get('category') || ''
@@ -938,10 +941,6 @@ const [
     )
   }
   
-  if (!session) {
-    return <Auth />
-  }
-
   if (!session) {
     return <Auth />
   }
@@ -1412,6 +1411,18 @@ const [
                         placeholder="https://maps.google.com/..."
                       />
                     </label>
+                    <label>
+                      Enlace de TikTok
+
+                      <input
+                        name="tiktok_link"
+                        type="url"
+                        defaultValue={
+                          editingActivity?.tiktok_link || ''
+                        }
+                        placeholder="https://www.tiktok.com/..."
+                      />
+                    </label>
 
                     <button
                       className="save-button"
@@ -1570,13 +1581,23 @@ const [
                             </p>
                           )}
 
-                          {activity.link && (
+                              {activity.link && (
                             <a
                               href={activity.link}
                               target="_blank"
                               rel="noreferrer"
                             >
                               Abrir en Google Maps
+                            </a>
+                          )}
+
+                          {activity.tiktok_link && (
+                            <a
+                              href={activity.tiktok_link}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Ver en TikTok
                             </a>
                           )}
 

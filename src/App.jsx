@@ -1,67 +1,177 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
+
+const initialCities = [
+  {
+    id: 1,
+    emoji: '🗼',
+    name: 'Tokio',
+    days: 'Días 1–4',
+    description: 'Barrios, templos, miradores y gastronomía.',
+    hotel: 'Hotel pendiente de confirmar',
+    plans: [
+      'Pasear por Shibuya',
+      'Visitar Meiji Jingu',
+      'Explorar Asakusa',
+    ],
+    places: [
+      {
+        id: 101,
+        name: 'Meiji Jingu',
+        description: 'Santuario rodeado por un gran bosque.',
+        link: '',
+      },
+    ],
+  },
+  {
+    id: 2,
+    emoji: '⛩️',
+    name: 'Kioto',
+    days: 'Días 5–8',
+    description: 'Santuarios, jardines y calles tradicionales.',
+    hotel: 'Hotel pendiente de confirmar',
+    plans: [
+      'Visitar Fushimi Inari',
+      'Pasear por Gion',
+      'Visitar Kiyomizu-dera',
+    ],
+    places: [
+      {
+        id: 201,
+        name: 'Fushimi Inari',
+        description: 'Santuario conocido por sus miles de torii.',
+        link: '',
+      },
+    ],
+  },
+  {
+    id: 3,
+    emoji: '🏯',
+    name: 'Osaka',
+    days: 'Días 9–11',
+    description: 'Castillo, comida callejera y vida nocturna.',
+    hotel: 'Hotel pendiente de confirmar',
+    plans: [
+      'Visitar el castillo de Osaka',
+      'Cenar en Dotonbori',
+      'Explorar Shinsekai',
+    ],
+    places: [],
+  },
+]
+
+function loadCities() {
+  try {
+    const storedCities = localStorage.getItem('japan26-cities')
+
+    if (storedCities) {
+      return JSON.parse(storedCities)
+    }
+
+    return initialCities
+  } catch {
+    return initialCities
+  }
+}
 
 function App() {
   const [activeTab, setActiveTab] = useState('itinerary')
-  const [selectedCity, setSelectedCity] = useState(null)
+  const [cities, setCities] = useState(loadCities)
+  const [selectedCityId, setSelectedCityId] = useState(null)
   const [citySection, setCitySection] = useState('hotel')
+  const [showPlaceForm, setShowPlaceForm] = useState(false)
 
-  const cities = [
-    {
-      id: 1,
-      emoji: '🗼',
-      name: 'Tokio',
-      days: 'Días 1–4',
-      description: 'Barrios, templos, miradores y gastronomía.',
-      hotel: 'Hotel pendiente de confirmar',
-      plans: [
-        'Pasear por Shibuya',
-        'Visitar Meiji Jingu',
-        'Explorar Asakusa',
-      ],
-    },
-    {
-      id: 2,
-      emoji: '⛩️',
-      name: 'Kioto',
-      days: 'Días 5–8',
-      description: 'Santuarios, jardines y calles tradicionales.',
-      hotel: 'Hotel pendiente de confirmar',
-      plans: [
-        'Visitar Fushimi Inari',
-        'Pasear por Gion',
-        'Visitar Kiyomizu-dera',
-      ],
-    },
-    {
-      id: 3,
-      emoji: '🏯',
-      name: 'Osaka',
-      days: 'Días 9–11',
-      description: 'Castillo, comida callejera y vida nocturna.',
-      hotel: 'Hotel pendiente de confirmar',
-      plans: [
-        'Visitar el castillo de Osaka',
-        'Cenar en Dotonbori',
-        'Explorar Shinsekai',
-      ],
-    },
-  ]
+  const selectedCity = cities.find(
+    (city) => city.id === selectedCityId
+  )
+
+  useEffect(() => {
+    localStorage.setItem(
+      'japan26-cities',
+      JSON.stringify(cities)
+    )
+  }, [cities])
 
   function changeTab(tab) {
     setActiveTab(tab)
-    setSelectedCity(null)
+    setSelectedCityId(null)
     setCitySection('hotel')
+    setShowPlaceForm(false)
   }
 
-  function openCity(city) {
-    setSelectedCity(city)
+  function openCity(cityId) {
+    setSelectedCityId(cityId)
     setCitySection('hotel')
+    setShowPlaceForm(false)
   }
 
   function goBackToCities() {
-    setSelectedCity(null)
+    setSelectedCityId(null)
     setCitySection('hotel')
+    setShowPlaceForm(false)
+  }
+
+  function changeCitySection(section) {
+    setCitySection(section)
+    setShowPlaceForm(false)
+  }
+
+  function addPlace(event) {
+    event.preventDefault()
+
+    const formData = new FormData(event.currentTarget)
+
+    const name = formData.get('name').trim()
+    const description = formData.get('description').trim()
+    const link = formData.get('link').trim()
+
+    if (!name) {
+      return
+    }
+
+    const newPlace = {
+      id: Date.now(),
+      name,
+      description,
+      link,
+    }
+
+    setCities((currentCities) =>
+      currentCities.map((city) =>
+        city.id === selectedCityId
+          ? {
+              ...city,
+              places: [...city.places, newPlace],
+            }
+          : city
+      )
+    )
+
+    event.currentTarget.reset()
+    setShowPlaceForm(false)
+  }
+
+  function deletePlace(placeId) {
+    const shouldDelete = window.confirm(
+      '¿Quieres eliminar este lugar?'
+    )
+
+    if (!shouldDelete) {
+      return
+    }
+
+    setCities((currentCities) =>
+      currentCities.map((city) =>
+        city.id === selectedCityId
+          ? {
+              ...city,
+              places: city.places.filter(
+                (place) => place.id !== placeId
+              ),
+            }
+          : city
+      )
+    )
   }
 
   return (
@@ -78,14 +188,18 @@ function App() {
 
       <section className="tabs">
         <button
-          className={`tab ${activeTab === 'itinerary' ? 'active' : ''}`}
+          className={`tab ${
+            activeTab === 'itinerary' ? 'active' : ''
+          }`}
           onClick={() => changeTab('itinerary')}
         >
           Itinerario
         </button>
 
         <button
-          className={`tab ${activeTab === 'cities' ? 'active' : ''}`}
+          className={`tab ${
+            activeTab === 'cities' ? 'active' : ''
+          }`}
           onClick={() => changeTab('cities')}
         >
           Ciudades
@@ -139,7 +253,7 @@ function App() {
             <button
               className="card city-card city-button"
               key={city.id}
-              onClick={() => openCity(city)}
+              onClick={() => openCity(city.id)}
             >
               <span className="city-emoji">
                 {city.emoji}
@@ -188,7 +302,7 @@ function App() {
               className={
                 citySection === 'hotel' ? 'selected' : ''
               }
-              onClick={() => setCitySection('hotel')}
+              onClick={() => changeCitySection('hotel')}
             >
               🛏️
               <span>Hotel</span>
@@ -198,7 +312,7 @@ function App() {
               className={
                 citySection === 'plans' ? 'selected' : ''
               }
-              onClick={() => setCitySection('plans')}
+              onClick={() => changeCitySection('plans')}
             >
               ✨
               <span>Planes</span>
@@ -208,7 +322,7 @@ function App() {
               className={
                 citySection === 'places' ? 'selected' : ''
               }
-              onClick={() => setCitySection('places')}
+              onClick={() => changeCitySection('places')}
             >
               ⛩️
               <span>Lugares</span>
@@ -218,7 +332,7 @@ function App() {
               className={
                 citySection === 'food' ? 'selected' : ''
               }
-              onClick={() => setCitySection('food')}
+              onClick={() => changeCitySection('food')}
             >
               🍜
               <span>Comer</span>
@@ -273,22 +387,113 @@ function App() {
 
           {citySection === 'places' && (
             <section className="city-section">
-              <p className="section-label">
-                LUGARES DE INTERÉS
-              </p>
-
-              <article className="empty-card">
-                <span>📍</span>
-
-                <h3>
-                  Aún no hay lugares añadidos
-                </h3>
-
-                <p>
-                  Aquí guardaremos templos, barrios,
-                  museos y miradores.
+              <div className="section-heading">
+                <p className="section-label">
+                  LUGARES DE INTERÉS
                 </p>
-              </article>
+
+                <button
+                  className="add-button"
+                  onClick={() =>
+                    setShowPlaceForm((current) => !current)
+                  }
+                >
+                  {showPlaceForm ? 'Cancelar' : '+ Añadir lugar'}
+                </button>
+              </div>
+
+              {showPlaceForm && (
+                <form
+                  className="place-form"
+                  onSubmit={addPlace}
+                >
+                  <label>
+                    Nombre del lugar
+                    <input
+                      name="name"
+                      type="text"
+                      placeholder="Ej. Senso-ji"
+                      required
+                    />
+                  </label>
+
+                  <label>
+                    Descripción
+                    <textarea
+                      name="description"
+                      placeholder="Qué quieres ver o recordar..."
+                      rows="3"
+                    />
+                  </label>
+
+                  <label>
+                    Enlace de Google Maps
+                    <input
+                      name="link"
+                      type="url"
+                      placeholder="https://maps.google.com/..."
+                    />
+                  </label>
+
+                  <button
+                    className="save-button"
+                    type="submit"
+                  >
+                    Guardar lugar
+                  </button>
+                </form>
+              )}
+
+              {selectedCity.places.length === 0 ? (
+                <article className="empty-card">
+                  <span>📍</span>
+
+                  <h3>
+                    Aún no hay lugares añadidos
+                  </h3>
+
+                  <p>
+                    Añade templos, barrios, museos y miradores.
+                  </p>
+                </article>
+              ) : (
+                selectedCity.places.map((place) => (
+                  <article
+                    className="place-card"
+                    key={place.id}
+                  >
+                    <span className="detail-icon">📍</span>
+
+                    <div className="place-information">
+                      <h3>{place.name}</h3>
+
+                      {place.description && (
+                        <p>{place.description}</p>
+                      )}
+
+                      {place.link && (
+                        <a
+                          href={place.link}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Abrir en Google Maps ↗
+                        </a>
+                      )}
+                    </div>
+
+                    <button
+                      className="delete-button"
+                      onClick={() =>
+                        deletePlace(place.id)
+                      }
+                      aria-label={`Eliminar ${place.name}`}
+                    >
+                      ×
+                    </button>
+                  </article>
+                ))
+              )}
             </section>
           )}
 
@@ -306,8 +511,8 @@ function App() {
                 </h3>
 
                 <p>
-                  Aquí guardaremos restaurantes y
-                  platos que quieras probar.
+                  Aquí guardaremos restaurantes y platos
+                  que quieras probar.
                 </p>
               </article>
             </section>

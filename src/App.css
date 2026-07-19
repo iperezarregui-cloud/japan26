@@ -414,3 +414,173 @@ button {
     font-size: 10px;
   }
 }
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.section-heading .section-label {
+  margin: 0;
+}
+
+.add-button {
+  flex-shrink: 0;
+  padding: 9px 13px;
+  border: 0;
+  border-radius: 11px;
+  background: #172033;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.add-button:hover {
+  background: #28334a;
+}
+
+.place-form {
+  display: grid;
+  gap: 15px;
+  margin-bottom: 18px;
+  padding: 20px;
+  border: 1px solid #ececf0;
+  border-radius: 20px;
+  background: #fbfbfc;
+}
+
+.place-form label {
+  display: grid;
+  gap: 7px;
+  color: #4f5869;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.place-form input,
+.place-form textarea {
+  width: 100%;
+  border: 1px solid #dfe1e6;
+  border-radius: 12px;
+  outline: none;
+  background: #ffffff;
+  color: #172033;
+  font: inherit;
+  font-size: 14px;
+}
+
+.place-form input {
+  min-height: 44px;
+  padding: 0 13px;
+}
+
+.place-form textarea {
+  min-height: 90px;
+  padding: 12px 13px;
+  resize: vertical;
+}
+
+.place-form input:focus,
+.place-form textarea:focus {
+  border-color: #e84f5f;
+  box-shadow: 0 0 0 3px rgba(232, 79, 95, 0.1);
+}
+
+.save-button {
+  min-height: 45px;
+  border: 0;
+  border-radius: 13px;
+  background: #e84f5f;
+  color: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.save-button:hover {
+  background: #d93c50;
+}
+
+.place-card {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 32px;
+  gap: 14px;
+  align-items: start;
+  margin-top: 10px;
+  padding: 17px;
+  border: 1px solid #ececf0;
+  border-radius: 18px;
+  background: #fbfbfc;
+}
+
+.place-information {
+  min-width: 0;
+}
+
+.place-information h3 {
+  margin: 1px 0 6px;
+  color: #172033;
+  font-size: 16px;
+}
+
+.place-information p {
+  margin: 0;
+  color: #737b8c;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.place-information a {
+  display: inline-block;
+  margin-top: 10px;
+  color: #e84f5f;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.place-information a:hover {
+  text-decoration: underline;
+}
+
+.delete-button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: #f0f1f4;
+  color: #8a919f;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.delete-button:hover {
+  background: #ffe8eb;
+  color: #d93c50;
+}
+
+@media (max-width: 520px) {
+  .section-heading {
+    align-items: flex-start;
+  }
+
+  .add-button {
+    padding: 9px 11px;
+    font-size: 11px;
+  }
+
+  .place-form {
+    padding: 16px;
+  }
+
+  .place-card {
+    grid-template-columns: 40px minmax(0, 1fr) 30px;
+    gap: 11px;
+    padding: 15px;
+  }
+}

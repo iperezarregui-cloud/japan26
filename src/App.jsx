@@ -9,24 +9,64 @@ const cities = [
     id: 'tokyo',
     emoji: '🗼',
     name: 'Tokio',
-    days: 'Días 1–4',
-    description: 'Barrios, templos, miradores y gastronomía.',
+    description:
+      'Barrios, templos, miradores y gastronomía.',
+    hotel: 'Hotel pendiente de confirmar',
+  },
+  {
+    id: 'hakone',
+    emoji: '🗻',
+    name: 'Hakone',
+    description:
+      'Monte Fuji, naturaleza, lago y aguas termales.',
     hotel: 'Hotel pendiente de confirmar',
   },
   {
     id: 'kyoto',
     emoji: '⛩️',
     name: 'Kioto',
-    days: 'Días 5–8',
-    description: 'Santuarios, jardines y calles tradicionales.',
+    description:
+      'Santuarios, jardines y calles tradicionales.',
+    hotel: 'Hotel pendiente de confirmar',
+  },
+  {
+    id: 'nara',
+    emoji: '🦌',
+    name: 'Nara',
+    description:
+      'Templos históricos, parques y ciervos.',
     hotel: 'Hotel pendiente de confirmar',
   },
   {
     id: 'osaka',
     emoji: '🏯',
     name: 'Osaka',
-    days: 'Días 9–11',
-    description: 'Castillo, comida callejera y vida nocturna.',
+    description:
+      'Castillo, comida callejera y vida nocturna.',
+    hotel: 'Hotel pendiente de confirmar',
+  },
+  {
+    id: 'kobe',
+    emoji: '🥩',
+    name: 'Kobe',
+    description:
+      'Puerto, gastronomía, barrios históricos y montaña.',
+    hotel: 'Hotel pendiente de confirmar',
+  },
+  {
+    id: 'hiroshima',
+    emoji: '🕊️',
+    name: 'Hiroshima',
+    description:
+      'Historia, cultura, jardines y gastronomía.',
+    hotel: 'Hotel pendiente de confirmar',
+  },
+  {
+    id: 'miyajima',
+    emoji: '⛩️',
+    name: 'Miyajima',
+    description:
+      'Santuario de Itsukushima, naturaleza y senderos.',
     hotel: 'Hotel pendiente de confirmar',
   },
 ]
@@ -37,14 +77,16 @@ const sections = {
     singular: 'plan',
     icon: '✨',
     emptyTitle: 'Aún no hay planes añadidos',
-    emptyText: 'Añade experiencias, excursiones y actividades.',
+    emptyText:
+      'Añade experiencias, excursiones y actividades.',
   },
   place: {
     label: 'Lugares',
     singular: 'lugar',
     icon: '⛩️',
     emptyTitle: 'Aún no hay lugares añadidos',
-    emptyText: 'Añade templos, barrios, museos y miradores.',
+    emptyText:
+      'Añade templos, barrios, museos y miradores.',
   },
   food: {
     label: 'Comer',
@@ -154,15 +196,109 @@ function getCategoryIcon(category, itemType) {
   return '✨'
 }
 
+function joinDayParts(parts) {
+  if (parts.length === 0) {
+    return ''
+  }
+
+  if (parts.length === 1) {
+    return parts[0]
+  }
+
+  if (parts.length === 2) {
+    return parts[0] + ' y ' + parts[1]
+  }
+
+  return (
+    parts.slice(0, -1).join(', ') +
+    ' y ' +
+    parts[parts.length - 1]
+  )
+}
+
+function formatCityDays(cityId, itineraryDays) {
+  const dayNumbers = itineraryDays
+    .filter((day) => day.city === cityId)
+    .map((day) => Number(day.day_number))
+    .filter((dayNumber) =>
+      Number.isFinite(dayNumber)
+    )
+    .sort((first, second) => first - second)
+
+  const uniqueDayNumbers = [
+    ...new Set(dayNumbers),
+  ]
+
+  if (uniqueDayNumbers.length === 0) {
+    return 'Sin días asignados'
+  }
+
+  if (uniqueDayNumbers.length === 1) {
+    return 'Día ' + uniqueDayNumbers[0]
+  }
+
+  const ranges = []
+  let rangeStart = uniqueDayNumbers[0]
+  let rangeEnd = uniqueDayNumbers[0]
+
+  for (
+    let index = 1;
+    index < uniqueDayNumbers.length;
+    index += 1
+  ) {
+    const currentDay = uniqueDayNumbers[index]
+
+    if (currentDay === rangeEnd + 1) {
+      rangeEnd = currentDay
+    } else {
+      ranges.push({
+        start: rangeStart,
+        end: rangeEnd,
+      })
+
+      rangeStart = currentDay
+      rangeEnd = currentDay
+    }
+  }
+
+  ranges.push({
+    start: rangeStart,
+    end: rangeEnd,
+  })
+
+  const formattedRanges = ranges.map(
+    (range) => {
+      if (range.start === range.end) {
+        return String(range.start)
+      }
+
+      return range.start + '–' + range.end
+    }
+  )
+
+  return 'Días ' + joinDayParts(formattedRanges)
+}
+
 function App() {
   const [session, setSession] = useState(null)
-  const [checkingSession, setCheckingSession] = useState(true)
+  const [checkingSession, setCheckingSession] =
+    useState(true)
 
-  const [activeTab, setActiveTab] = useState('itinerary')
-  const [selectedCityId, setSelectedCityId] = useState(null)
-  const [citySection, setCitySection] = useState('hotel')
+  const [activeTab, setActiveTab] =
+    useState('itinerary')
 
-  const [activities, setActivities] = useState([])
+  const [selectedCityId, setSelectedCityId] =
+    useState(null)
+
+  const [citySection, setCitySection] =
+    useState('hotel')
+
+  const [activities, setActivities] =
+    useState([])
+
+  const [itineraryDays, setItineraryDays] =
+    useState([])
+
   const [loadingActivities, setLoadingActivities] =
     useState(false)
 
@@ -205,7 +341,11 @@ function App() {
         activity.city === selectedCityId &&
         activity.item_type === currentItemType
     )
-  }, [activities, selectedCityId, currentItemType])
+  }, [
+    activities,
+    selectedCityId,
+    currentItemType,
+  ])
 
   const visibleActivities = useMemo(() => {
     return citySectionActivities
@@ -245,21 +385,29 @@ function App() {
           )
         }
 
-        return first.name.localeCompare(second.name)
+        return first.name.localeCompare(
+          second.name
+        )
       })
-  }, [citySectionActivities, activityFilter])
+  }, [
+    citySectionActivities,
+    activityFilter,
+  ])
 
-  const pendingCount = citySectionActivities.filter(
-    (activity) => !activity.done
-  ).length
+  const pendingCount =
+    citySectionActivities.filter(
+      (activity) => !activity.done
+    ).length
 
-  const doneCount = citySectionActivities.filter(
-    (activity) => activity.done
-  ).length
+  const doneCount =
+    citySectionActivities.filter(
+      (activity) => activity.done
+    ).length
 
   useEffect(() => {
     async function loadSession() {
-      const result = await supabase.auth.getSession()
+      const result =
+        await supabase.auth.getSession()
 
       setSession(result.data.session)
       setCheckingSession(false)
@@ -282,29 +430,64 @@ function App() {
 
   useEffect(() => {
     if (session) {
-      loadActivities()
+      loadApplicationData()
     } else {
       setActivities([])
+      setItineraryDays([])
     }
   }, [session])
 
-  async function loadActivities() {
+  async function loadApplicationData() {
     setLoadingActivities(true)
     setActivitiesError('')
 
-    const result = await supabase
-      .from('activities')
-      .select('*')
-      .order('created_at', { ascending: true })
+    const [activitiesResult, daysResult] =
+      await Promise.all([
+        supabase
+          .from('activities')
+          .select('*')
+          .order('created_at', {
+            ascending: true,
+          }),
 
-    if (result.error) {
-      console.error(result.error)
+        supabase
+          .from('itinerary_days')
+          .select(
+            'id, day_number, city, travel_date'
+          )
+          .order('day_number', {
+            ascending: true,
+          }),
+      ])
+
+    if (activitiesResult.error) {
+      console.error(
+        'Error al cargar actividades:',
+        activitiesResult.error
+      )
 
       setActivitiesError(
         'No se pudo cargar la información.'
       )
     } else {
-      setActivities(result.data || [])
+      setActivities(
+        activitiesResult.data || []
+      )
+    }
+
+    if (daysResult.error) {
+      console.error(
+        'Error al cargar días:',
+        daysResult.error
+      )
+
+      setActivitiesError(
+        'No se pudieron calcular los días de las ciudades.'
+      )
+    } else {
+      setItineraryDays(
+        daysResult.data || []
+      )
     }
 
     setLoadingActivities(false)
@@ -331,6 +514,10 @@ function App() {
     setActiveTab(tab)
     setSelectedCityId(null)
     resetCityView()
+
+    if (tab === 'cities' && session) {
+      loadApplicationData()
+    }
   }
 
   function openCity(cityId) {
@@ -341,6 +528,10 @@ function App() {
   function goBackToCities() {
     setSelectedCityId(null)
     resetCityView()
+
+    if (session) {
+      loadApplicationData()
+    }
   }
 
   function changeCitySection(section) {
@@ -414,7 +605,10 @@ function App() {
       .single()
 
     if (result.error) {
-      console.error(result.error)
+      console.error(
+        'Error al guardar actividad:',
+        result.error
+      )
 
       setActivitiesError(
         'No se pudo guardar el elemento.'
@@ -452,7 +646,10 @@ function App() {
       .single()
 
     if (result.error) {
-      console.error(result.error)
+      console.error(
+        'Error al actualizar actividad:',
+        result.error
+      )
 
       setActivitiesError(
         'No se pudo actualizar el estado.'
@@ -462,13 +659,17 @@ function App() {
     }
 
     setActivities((currentActivities) =>
-      currentActivities.map((currentActivity) => {
-        if (currentActivity.id === activity.id) {
-          return result.data
-        }
+      currentActivities.map(
+        (currentActivity) => {
+          if (
+            currentActivity.id === activity.id
+          ) {
+            return result.data
+          }
 
-        return currentActivity
-      })
+          return currentActivity
+        }
+      )
     )
   }
 
@@ -491,7 +692,10 @@ function App() {
       .eq('id', activity.id)
 
     if (result.error) {
-      console.error(result.error)
+      console.error(
+        'Error al eliminar actividad:',
+        result.error
+      )
 
       setActivitiesError(
         'No se pudo eliminar el elemento.'
@@ -527,8 +731,12 @@ function App() {
         <span className="flag">🇯🇵</span>
 
         <div className="header-information">
-          <p className="eyebrow">MI VIAJE</p>
+          <p className="eyebrow">
+            MI VIAJE
+          </p>
+
           <h1>Japón 2026</h1>
+
           <p>Itinerario de 14 días</p>
         </div>
 
@@ -549,7 +757,9 @@ function App() {
               : 'tab'
           }
           type="button"
-          onClick={() => changeTab('itinerary')}
+          onClick={() =>
+            changeTab('itinerary')
+          }
         >
           Itinerario
         </button>
@@ -561,7 +771,9 @@ function App() {
               : 'tab'
           }
           type="button"
-          onClick={() => changeTab('cities')}
+          onClick={() =>
+            changeTab('cities')
+          }
         >
           Ciudades
         </button>
@@ -581,33 +793,46 @@ function App() {
             <h2>Ciudades</h2>
 
             <p>
-              Consulta hoteles, planes, lugares de
-              interés y restaurantes.
+              Los días se calculan automáticamente
+              según el itinerario.
             </p>
 
-            {cities.map((city) => (
-              <button
-                className="card city-card city-button"
-                key={city.id}
-                type="button"
-                onClick={() => openCity(city.id)}
-              >
-                <span className="city-emoji">
-                  {city.emoji}
-                </span>
+            {cities.map((city) => {
+              const assignedDays =
+                formatCityDays(
+                  city.id,
+                  itineraryDays
+                )
 
-                <div>
-                  <span className="city-days">
-                    {city.days}
+              return (
+                <button
+                  className="card city-card city-button"
+                  key={city.id}
+                  type="button"
+                  onClick={() =>
+                    openCity(city.id)
+                  }
+                >
+                  <span className="city-emoji">
+                    {city.emoji}
                   </span>
 
-                  <h3>{city.name}</h3>
-                  <p>{city.description}</p>
-                </div>
+                  <div>
+                    <span className="city-days">
+                      {assignedDays}
+                    </span>
 
-                <span className="arrow">›</span>
-              </button>
-            ))}
+                    <h3>{city.name}</h3>
+
+                    <p>{city.description}</p>
+                  </div>
+
+                  <span className="arrow">
+                    ›
+                  </span>
+                </button>
+              )
+            })}
           </section>
         )}
 
@@ -629,7 +854,10 @@ function App() {
 
               <div>
                 <p className="date">
-                  {selectedCity.days}
+                  {formatCityDays(
+                    selectedCity.id,
+                    itineraryDays
+                  )}
                 </p>
 
                 <h2>{selectedCity.name}</h2>
@@ -711,10 +939,13 @@ function App() {
 
                   <div>
                     <h3>
-                      Hotel en {selectedCity.name}
+                      Hotel en{' '}
+                      {selectedCity.name}
                     </h3>
 
-                    <p>{selectedCity.hotel}</p>
+                    <p>
+                      {selectedCity.hotel}
+                    </p>
                   </div>
                 </article>
               </section>
@@ -767,13 +998,16 @@ function App() {
 
                   <button
                     className={
-                      activityFilter === 'pending'
+                      activityFilter ===
+                      'pending'
                         ? 'selected'
                         : ''
                     }
                     type="button"
                     onClick={() =>
-                      setActivityFilter('pending')
+                      setActivityFilter(
+                        'pending'
+                      )
                     }
                   >
                     Pendientes
@@ -806,7 +1040,8 @@ function App() {
                         name="name"
                         type="text"
                         placeholder={
-                          currentItemType === 'food'
+                          currentItemType ===
+                          'food'
                             ? 'Ej. Ichiran Ramen'
                             : 'Ej. Senso-ji'
                         }
@@ -814,7 +1049,8 @@ function App() {
                       />
                     </label>
 
-                    {selectedCityId === 'tokyo' && (
+                    {selectedCityId ===
+                      'tokyo' && (
                       <label>
                         Barrio de Tokio
 
@@ -826,8 +1062,12 @@ function App() {
                           {tokyoNeighborhoods.map(
                             (neighborhood) => (
                               <option
-                                key={neighborhood}
-                                value={neighborhood}
+                                key={
+                                  neighborhood
+                                }
+                                value={
+                                  neighborhood
+                                }
                               >
                                 {neighborhood}
                               </option>
@@ -852,7 +1092,11 @@ function App() {
                                 key={category}
                                 value={category}
                               >
-                                {categoryIcons[category]}{' '}
+                                {
+                                  categoryIcons[
+                                    category
+                                  ]
+                                }{' '}
                                 {category}
                               </option>
                             )
@@ -870,8 +1114,12 @@ function App() {
                           {priorityOptions.map(
                             (priority) => (
                               <option
-                                key={priority.value}
-                                value={priority.value}
+                                key={
+                                  priority.value
+                                }
+                                value={
+                                  priority.value
+                                }
                               >
                                 {priority.icon}{' '}
                                 {priority.label}
@@ -939,130 +1187,68 @@ function App() {
                 {loadingActivities && (
                   <article className="empty-card">
                     <span>⏳</span>
-                    <h3>Cargando información...</h3>
+                    <h3>
+                      Cargando información...
+                    </h3>
                   </article>
                 )}
 
                 {!loadingActivities &&
-                  visibleActivities.length === 0 && (
+                  visibleActivities.length ===
+                    0 && (
                     <article className="empty-card">
                       <span>
                         {currentSection.icon}
                       </span>
 
                       <h3>
-                        {currentSection.emptyTitle}
+                        {
+                          currentSection.emptyTitle
+                        }
                       </h3>
 
                       <p>
-                        {currentSection.emptyText}
+                        {
+                          currentSection.emptyText
+                        }
                       </p>
                     </article>
                   )}
 
                 {!loadingActivities &&
-                  visibleActivities.map((activity) => {
-                    const priority = getPriority(
-                      activity.priority
-                    )
+                  visibleActivities.map(
+                    (activity) => {
+                      const priority =
+                        getPriority(
+                          activity.priority
+                        )
 
-                    const categoryIcon =
-                      getCategoryIcon(
-                        activity.category,
-                        activity.item_type
-                      )
+                      const categoryIcon =
+                        getCategoryIcon(
+                          activity.category,
+                          activity.item_type
+                        )
 
-                    return (
-                      <article
-                        className={
-                          activity.done
-                            ? 'activity-card activity-done'
-                            : 'activity-card'
-                        }
-                        key={activity.id}
-                      >
-                        <div className="activity-leading">
-                          <span className="category-icon">
-                            {categoryIcon}
-                          </span>
-
-                          <button
-                            className={
-                              activity.done
-                                ? 'done-button selected'
-                                : 'done-button'
-                            }
-                            type="button"
-                            onClick={() =>
-                              toggleActivityDone(
-                                activity
-                              )
-                            }
-                          >
-                            {activity.done ? '✓' : ''}
-                          </button>
-                        </div>
-
-                        <div className="activity-information">
-                          <div className="activity-title-row">
-                            <h3>{activity.name}</h3>
-
-                            <span
-                              className={
-                                'priority-badge priority-' +
-                                activity.priority
-                              }
-                            >
-                              {priority.icon}{' '}
-                              {priority.label}
+                      return (
+                        <article
+                          className={
+                            activity.done
+                              ? 'activity-card activity-done'
+                              : 'activity-card'
+                          }
+                          key={activity.id}
+                        >
+                          <div className="activity-leading">
+                            <span className="category-icon">
+                              {categoryIcon}
                             </span>
-                          </div>
 
-                          <div className="activity-metadata">
-                            {activity.neighborhood && (
-                              <span>
-                                📍{' '}
-                                {activity.neighborhood}
-                              </span>
-                            )}
-
-                            {activity.category && (
-                              <span>
-                                {categoryIcon}{' '}
-                                {activity.category}
-                              </span>
-                            )}
-
-                            {activity.estimated_duration && (
-                              <span>
-                                ⏱️{' '}
-                                {
-                                  activity.estimated_duration
-                                }{' '}
-                                min
-                              </span>
-                            )}
-                          </div>
-
-                          {activity.description && (
-                            <p>
-                              {activity.description}
-                            </p>
-                          )}
-
-                          {activity.link && (
-                            <a
-                              href={activity.link}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              Abrir en Google Maps ↗
-                            </a>
-                          )}
-
-                          {activity.done && (
                             <button
-                              className="restore-button"
+                              className={
+                                activity.done
+                                  ? 'done-button selected'
+                                  : 'done-button'
+                              }
                               type="button"
                               onClick={() =>
                                 toggleActivityDone(
@@ -1070,26 +1256,113 @@ function App() {
                                 )
                               }
                             >
-                              Marcar como pendiente
+                              {activity.done
+                                ? '✓'
+                                : ''}
                             </button>
-                          )}
-                        </div>
+                          </div>
 
-                        <button
-                          className="delete-button"
-                          type="button"
-                          onClick={() =>
-                            deleteActivity(activity)
-                          }
-                          aria-label={
-                            'Eliminar ' + activity.name
-                          }
-                        >
-                          ×
-                        </button>
-                      </article>
-                    )
-                  })}
+                          <div className="activity-information">
+                            <div className="activity-title-row">
+                              <h3>
+                                {activity.name}
+                              </h3>
+
+                              <span
+                                className={
+                                  'priority-badge priority-' +
+                                  activity.priority
+                                }
+                              >
+                                {priority.icon}{' '}
+                                {priority.label}
+                              </span>
+                            </div>
+
+                            <div className="activity-metadata">
+                              {activity.neighborhood && (
+                                <span>
+                                  📍{' '}
+                                  {
+                                    activity.neighborhood
+                                  }
+                                </span>
+                              )}
+
+                              {activity.category && (
+                                <span>
+                                  {categoryIcon}{' '}
+                                  {
+                                    activity.category
+                                  }
+                                </span>
+                              )}
+
+                              {activity.estimated_duration && (
+                                <span>
+                                  ⏱️{' '}
+                                  {
+                                    activity.estimated_duration
+                                  }{' '}
+                                  min
+                                </span>
+                              )}
+                            </div>
+
+                            {activity.description && (
+                              <p>
+                                {
+                                  activity.description
+                                }
+                              </p>
+                            )}
+
+                            {activity.link && (
+                              <a
+                                href={activity.link}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                Abrir en Google
+                                Maps ↗
+                              </a>
+                            )}
+
+                            {activity.done && (
+                              <button
+                                className="restore-button"
+                                type="button"
+                                onClick={() =>
+                                  toggleActivityDone(
+                                    activity
+                                  )
+                                }
+                              >
+                                Marcar como
+                                pendiente
+                              </button>
+                            )}
+                          </div>
+
+                          <button
+                            className="delete-button"
+                            type="button"
+                            onClick={() =>
+                              deleteActivity(
+                                activity
+                              )
+                            }
+                            aria-label={
+                              'Eliminar ' +
+                              activity.name
+                            }
+                          >
+                            ×
+                          </button>
+                        </article>
+                      )
+                    }
+                  )}
               </section>
             )}
           </section>

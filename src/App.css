@@ -190,3 +190,42 @@ button {
     width: fit-content;
   }
 }
+.city-card {
+  align-items: center;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.city-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(23, 32, 51, 0.08);
+}
+
+.city-emoji {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border-radius: 18px;
+  background: #ffffff;
+  font-size: 29px;
+  box-shadow: 0 5px 16px rgba(23, 32, 51, 0.07);
+}
+
+.city-days {
+  display: block;
+  margin-bottom: 4px;
+  color: #e84f5f;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 520px) {
+  .city-card {
+    grid-template-columns: 58px 1fr;
+  }
+}

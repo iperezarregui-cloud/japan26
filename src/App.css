@@ -229,3 +229,115 @@ button {
     grid-template-columns: 58px 1fr;
   }
 }
+.city-button {
+  position: relative;
+  width: 100%;
+  border: 1px solid #ececf0;
+  color: inherit;
+  text-align: left;
+}
+
+.city-button > div {
+  padding-right: 24px;
+}
+
+.arrow {
+  position: absolute;
+  right: 20px;
+  color: #b0b5bf;
+  font-size: 30px;
+  font-weight: 300;
+}
+
+.back-button {
+  margin: 0 0 24px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: #f1f2f5;
+  color: #4f5869;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.back-button:hover {
+  background: #e8e9ed;
+}
+
+.city-title {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.city-title h2 {
+  margin: 4px 0 0;
+  color: #172033;
+  font-size: 29px;
+}
+
+.city-emoji.large {
+  width: 70px;
+  height: 70px;
+  font-size: 36px;
+}
+
+.city-section {
+  margin-top: 25px;
+}
+
+.section-label {
+  margin: 0 0 10px;
+  color: #e84f5f;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.detail-card {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 14px;
+  align-items: center;
+  margin-top: 10px;
+  padding: 17px;
+  border: 1px solid #ececf0;
+  border-radius: 18px;
+  background: #fbfbfc;
+}
+
+.detail-card h3 {
+  margin: 0 0 5px;
+  color: #172033;
+  font-size: 16px;
+}
+
+.detail-card p {
+  margin: 0;
+  color: #737b8c;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.detail-icon,
+.plan-number {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 13px;
+  background: #ffffff;
+}
+
+.detail-icon {
+  font-size: 22px;
+}
+
+.plan-number {
+  background: #ffe8eb;
+  color: #d93c50;
+  font-size: 13px;
+  font-weight: 800;
+}

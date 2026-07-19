@@ -3,6 +3,7 @@ import './App.css'
 
 function App() {
   const [activeTab, setActiveTab] = useState('itinerary')
+  const [selectedCity, setSelectedCity] = useState(null)
 
   const cities = [
     {
@@ -11,6 +12,12 @@ function App() {
       name: 'Tokio',
       days: 'Días 1–4',
       description: 'Barrios, templos, miradores y gastronomía.',
+      hotel: 'Hotel pendiente de confirmar',
+      plans: [
+        'Pasear por Shibuya',
+        'Visitar Meiji Jingu',
+        'Explorar Asakusa',
+      ],
     },
     {
       id: 2,
@@ -18,6 +25,12 @@ function App() {
       name: 'Kioto',
       days: 'Días 5–8',
       description: 'Santuarios, jardines y calles tradicionales.',
+      hotel: 'Hotel pendiente de confirmar',
+      plans: [
+        'Visitar Fushimi Inari',
+        'Pasear por Gion',
+        'Visitar Kiyomizu-dera',
+      ],
     },
     {
       id: 3,
@@ -25,8 +38,19 @@ function App() {
       name: 'Osaka',
       days: 'Días 9–11',
       description: 'Castillo, comida callejera y vida nocturna.',
+      hotel: 'Hotel pendiente de confirmar',
+      plans: [
+        'Visitar el castillo de Osaka',
+        'Cenar en Dotonbori',
+        'Explorar Shinsekai',
+      ],
     },
   ]
+
+  function changeTab(tab) {
+    setActiveTab(tab)
+    setSelectedCity(null)
+  }
 
   return (
     <main className="app">
@@ -43,14 +67,14 @@ function App() {
       <section className="tabs">
         <button
           className={`tab ${activeTab === 'itinerary' ? 'active' : ''}`}
-          onClick={() => setActiveTab('itinerary')}
+          onClick={() => changeTab('itinerary')}
         >
           Itinerario
         </button>
 
         <button
           className={`tab ${activeTab === 'cities' ? 'active' : ''}`}
-          onClick={() => setActiveTab('cities')}
+          onClick={() => changeTab('cities')}
         >
           Ciudades
         </button>
@@ -89,17 +113,21 @@ function App() {
         </section>
       )}
 
-      {activeTab === 'cities' && (
+      {activeTab === 'cities' && !selectedCity && (
         <section className="content">
           <p className="date">DESTINOS DEL VIAJE</p>
           <h2>Ciudades</h2>
 
           <p>
-            Consulta los hoteles, planes y lugares de interés de cada ciudad.
+            Pulsa una ciudad para consultar sus hoteles y planes.
           </p>
 
           {cities.map((city) => (
-            <article className="card city-card" key={city.id}>
+            <button
+              className="card city-card city-button"
+              key={city.id}
+              onClick={() => setSelectedCity(city)}
+            >
               <span className="city-emoji">{city.emoji}</span>
 
               <div>
@@ -107,8 +135,60 @@ function App() {
                 <h3>{city.name}</h3>
                 <p>{city.description}</p>
               </div>
-            </article>
+
+              <span className="arrow">›</span>
+            </button>
           ))}
+        </section>
+      )}
+
+      {activeTab === 'cities' && selectedCity && (
+        <section className="content">
+          <button
+            className="back-button"
+            onClick={() => setSelectedCity(null)}
+          >
+            ← Volver a ciudades
+          </button>
+
+          <div className="city-title">
+            <span className="city-emoji large">
+              {selectedCity.emoji}
+            </span>
+
+            <div>
+              <p className="date">{selectedCity.days}</p>
+              <h2>{selectedCity.name}</h2>
+            </div>
+          </div>
+
+          <section className="city-section">
+            <p className="section-label">HOTEL</p>
+
+            <article className="detail-card">
+              <span className="detail-icon">🛏️</span>
+
+              <div>
+                <h3>Alojamiento</h3>
+                <p>{selectedCity.hotel}</p>
+              </div>
+            </article>
+          </section>
+
+          <section className="city-section">
+            <p className="section-label">PLANES</p>
+
+            {selectedCity.plans.map((plan, index) => (
+              <article className="detail-card" key={plan}>
+                <span className="plan-number">{index + 1}</span>
+
+                <div>
+                  <h3>{plan}</h3>
+                  <p>Información pendiente de completar.</p>
+                </div>
+              </article>
+            ))}
+          </section>
         </section>
       )}
     </main>

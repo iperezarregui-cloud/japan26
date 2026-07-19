@@ -6,31 +6,37 @@ const manualTypes = [
     value: 'transport',
     label: 'Transporte',
     icon: '🚆',
+    supportsBooking: true,
   },
   {
     value: 'accommodation',
     label: 'Alojamiento',
     icon: '🏨',
+    supportsBooking: true,
   },
   {
     value: 'food',
     label: 'Comida',
     icon: '🍜',
+    supportsBooking: false,
   },
   {
     value: 'note',
     label: 'Nota',
     icon: '📝',
+    supportsBooking: false,
   },
   {
     value: 'free_time',
     label: 'Tiempo libre',
     icon: '☕',
+    supportsBooking: false,
   },
   {
     value: 'manual',
     label: 'Otra línea',
     icon: '📌',
+    supportsBooking: false,
   },
 ]
 
@@ -47,6 +53,7 @@ function getManualType(type) {
     value: type,
     label: 'Otra línea',
     icon: '📌',
+    supportsBooking: false,
   }
 }
 
@@ -62,7 +69,10 @@ function DayItems({ day }) {
   const [items, setItems] = useState([])
   const [loadingItems, setLoadingItems] = useState(true)
   const [savingItem, setSavingItem] = useState(false)
+  const [updatingItemId, setUpdatingItemId] = useState(null)
+
   const [showItemForm, setShowItemForm] = useState(false)
+  const [editingItem, setEditingItem] = useState(null)
   const [errorMessage, setErrorMessage] = useState('')
 
   const sortedItems = useMemo(() => {
@@ -120,12 +130,20 @@ function DayItems({ day }) {
     setLoadingItems(false)
   }
 
-  function openItemForm() {
+  function openNewItemForm() {
+    setEditingItem(null)
+    setShowItemForm(true)
+    setErrorMessage('')
+  }
+
+  function openEditItemForm(item) {
+    setEditingItem(item)
     setShowItemForm(true)
     setErrorMessage('')
   }
 
   function closeItemForm() {
+    setEditingItem(null)
     setShowItemForm(false)
     setErrorMessage('')
   }
@@ -169,7 +187,7 @@ function DayItems({ day }) {
 
     if (!title) {
       setErrorMessage(
-        'El título de la línea es obligatorio.'
+        'El título es obligatorio.'
       )
 
       return
@@ -187,6 +205,8 @@ function DayItems({ day }) {
       return
     }
 
+    const selectedType = getManualType(itemType)
+
     const itemInformation = {
       day_id: day.id,
       activity_id: null,
@@ -196,17 +216,35 @@ function DayItems({ day }) {
       title,
       description,
       link,
-      position: items.length,
+      position: editingItem
+        ? editingItem.position
+        : items.length,
+    }
+
+    if (!selectedType.supportsBooking) {
+      itemInformation.reserved = false
+      itemInformation.paid = false
     }
 
     setSavingItem(true)
     setErrorMessage('')
 
-    const result = await supabase
-      .from('itinerary_items')
-      .insert(itemInformation)
-      .select()
-      .single()
+    let result
+
+    if (editingItem) {
+      result = await supabase
+        .from('itinerary_items')
+        .update(itemInformation)
+        .eq('id', editingItem.id)
+        .select()
+        .single()
+    } else {
+      result = await supabase
+        .from('itinerary_items')
+        .insert(itemInformation)
+        .select()
+        .single()
+    }
 
     if (result.error) {
       console.error(
@@ -215,19 +253,74 @@ function DayItems({ day }) {
       )
 
       setErrorMessage(
-        'No se pudo añadir la línea al itinerario.'
+        'No se pudo guardar la línea del itinerario.'
       )
     } else {
-      setItems((currentItems) => [
-        ...currentItems,
-        result.data,
-      ])
+      if (editingItem) {
+        setItems((currentItems) =>
+          currentItems.map((item) => {
+            if (item.id === editingItem.id) {
+              return result.data
+            }
+
+            return item
+          })
+        )
+      } else {
+        setItems((currentItems) => [
+          ...currentItems,
+          result.data,
+        ])
+      }
 
       form.reset()
       closeItemForm()
     }
 
     setSavingItem(false)
+  }
+
+  async function toggleBookingStatus(item, field) {
+    if (updatingItemId) {
+      return
+    }
+
+    const nextValue = !item[field]
+
+    setUpdatingItemId(item.id)
+    setErrorMessage('')
+
+    const result = await supabase
+      .from('itinerary_items')
+      .update({
+        nextValue,
+      })
+      .eq('id', item.id)
+      .select()
+      .single()
+
+    if (result.error) {
+      console.error(
+        'Error al actualizar el estado:',
+        result.error
+      )
+
+      setErrorMessage(
+        'No se pudo actualizar el estado.'
+      )
+    } else {
+      setItems((currentItems) =>
+        currentItems.map((currentItem) => {
+          if (currentItem.id === item.id) {
+            return result.data
+          }
+
+          return currentItem
+        })
+      )
+    }
+
+    setUpdatingItemId(null)
   }
 
   async function deleteItem(item) {
@@ -354,14 +447,88 @@ function DayItems({ day }) {
                 </div>
 
                 <div className="manual-timeline-card">
-                  <span className="manual-item-type">
-                    {itemType.label}
-                  </span>
+                  <div className="manual-card-heading">
+                    <div>
+                      <span className="manual-item-type">
+                        {itemType.label}
+                      </span>
 
-                  <h4>{item.title}</h4>
+                      <h4>{item.title}</h4>
+                    </div>
+
+                    <button
+                      className="manual-edit-button"
+                      type="button"
+                      onClick={() =>
+                        openEditItemForm(item)
+                      }
+                    >
+                      Editar
+                    </button>
+                  </div>
 
                   {item.description && (
                     <p>{item.description}</p>
+                  )}
+
+                  {itemType.supportsBooking && (
+                    <div className="booking-statuses">
+                      <button
+                        className={
+                          item.reserved
+                            ? 'booking-status selected'
+                            : 'booking-status'
+                        }
+                        type="button"
+                        disabled={
+                          updatingItemId === item.id
+                        }
+                        onClick={() =>
+                          toggleBookingStatus(
+                            item,
+                            'reserved'
+                          )
+                        }
+                      >
+                        <span>
+                          {item.reserved
+                            ? '✓'
+                            : '○'}
+                        </span>
+
+                        {item.reserved
+                          ? 'Reservado'
+                          : 'Pendiente de reservar'}
+                      </button>
+
+                      <button
+                        className={
+                          item.paid
+                            ? 'booking-status paid selected'
+                            : 'booking-status paid'
+                        }
+                        type="button"
+                        disabled={
+                          updatingItemId === item.id
+                        }
+                        onClick={() =>
+                          toggleBookingStatus(
+                            item,
+                            'paid'
+                          )
+                        }
+                      >
+                        <span>
+                          {item.paid
+                            ? '✓'
+                            : '○'}
+                        </span>
+
+                        {item.paid
+                          ? 'Pagado'
+                          : 'Pendiente de pago'}
+                      </button>
+                    </div>
                   )}
 
                   {item.link && (
@@ -396,15 +563,26 @@ function DayItems({ day }) {
         <form
           className="manual-item-form"
           onSubmit={saveItem}
+          key={
+            editingItem
+              ? 'edit-' + editingItem.id
+              : 'new-item'
+          }
         >
           <div className="manual-item-form-heading">
             <div>
               <p className="section-label">
-                AÑADIR AL DÍA{' '}
-                {day.day_number}
+                {editingItem
+                  ? 'EDITAR LÍNEA'
+                  : 'AÑADIR AL DÍA ' +
+                    day.day_number}
               </p>
 
-              <h4>Nueva línea</h4>
+              <h4>
+                {editingItem
+                  ? editingItem.title
+                  : 'Nueva línea'}
+              </h4>
             </div>
 
             <button
@@ -422,7 +600,11 @@ function DayItems({ day }) {
 
             <select
               name="item_type"
-              defaultValue="transport"
+              defaultValue={
+                editingItem
+                  ? editingItem.item_type
+                  : 'transport'
+              }
             >
               {manualTypes.map((type) => (
                 <option
@@ -441,6 +623,11 @@ function DayItems({ day }) {
             <input
               name="title"
               type="text"
+              defaultValue={
+                editingItem
+                  ? editingItem.title
+                  : ''
+              }
               placeholder="Ej. Shinkansen Tokio → Kioto"
               required
             />
@@ -453,6 +640,15 @@ function DayItems({ day }) {
               <input
                 name="start_time"
                 type="time"
+                defaultValue={
+                  editingItem &&
+                  editingItem.start_time
+                    ? editingItem.start_time.slice(
+                        0,
+                        5
+                      )
+                    : ''
+                }
               />
             </label>
 
@@ -462,6 +658,15 @@ function DayItems({ day }) {
               <input
                 name="end_time"
                 type="time"
+                defaultValue={
+                  editingItem &&
+                  editingItem.end_time
+                    ? editingItem.end_time.slice(
+                        0,
+                        5
+                      )
+                    : ''
+                }
               />
             </label>
           </div>
@@ -472,6 +677,11 @@ function DayItems({ day }) {
             <textarea
               name="description"
               rows="3"
+              defaultValue={
+                editingItem
+                  ? editingItem.description || ''
+                  : ''
+              }
               placeholder="Número de tren, asiento, reserva, indicaciones..."
             />
           </label>
@@ -482,6 +692,11 @@ function DayItems({ day }) {
             <input
               name="link"
               type="url"
+              defaultValue={
+                editingItem
+                  ? editingItem.link || ''
+                  : ''
+              }
               placeholder="Billete, reserva o Google Maps"
             />
           </label>
@@ -493,7 +708,9 @@ function DayItems({ day }) {
           >
             {savingItem
               ? 'Guardando...'
-              : 'Añadir al itinerario'}
+              : editingItem
+                ? 'Guardar cambios'
+                : 'Añadir al itinerario'}
           </button>
         </form>
       )}
@@ -502,7 +719,7 @@ function DayItems({ day }) {
         <button
           className="secondary-action-button active"
           type="button"
-          onClick={openItemForm}
+          onClick={openNewItemForm}
         >
           + Añadir al día
         </button>

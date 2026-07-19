@@ -9,9 +9,19 @@ const itineraryCities = [
     emoji: '🗼',
   },
   {
+    value: 'hakone',
+    label: 'Hakone',
+    emoji: '🗻',
+  },
+  {
     value: 'kyoto',
     label: 'Kioto',
     emoji: '⛩️',
+  },
+  {
+    value: 'nara',
+    label: 'Nara',
+    emoji: '🦌',
   },
   {
     value: 'osaka',
@@ -32,16 +42,6 @@ const itineraryCities = [
     value: 'miyajima',
     label: 'Miyajima',
     emoji: '⛩️',
-  },
-  {
-    value: 'nara',
-    label: 'Nara',
-    emoji: '🦌',
-  },
-  {
-    value: 'hakone',
-    label: 'Hakone',
-    emoji: '🗻',
   },
   {
     value: 'other',
@@ -84,23 +84,12 @@ function formatTravelDate(dateValue) {
 
 function Itinerary() {
   const [days, setDays] = useState([])
-  const [expandedDays, setExpandedDays] =
-    useState([])
-
-  const [loadingDays, setLoadingDays] =
-    useState(true)
-
-  const [savingDay, setSavingDay] =
-    useState(false)
-
-  const [showDayForm, setShowDayForm] =
-    useState(false)
-
-  const [editingDay, setEditingDay] =
-    useState(null)
-
-  const [errorMessage, setErrorMessage] =
-    useState('')
+  const [expandedDays, setExpandedDays] = useState([])
+  const [loadingDays, setLoadingDays] = useState(true)
+  const [savingDay, setSavingDay] = useState(false)
+  const [showDayForm, setShowDayForm] = useState(false)
+  const [editingDay, setEditingDay] = useState(null)
+  const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
     loadDays()
@@ -127,15 +116,10 @@ function Itinerary() {
         'No se pudo cargar el itinerario.'
       )
     } else {
-      const loadedDays = result.data || []
+      setDays(result.data || [])
 
-      setDays(loadedDays)
-
-      if (loadedDays.length > 0) {
-        setExpandedDays([
-          loadedDays[0].id,
-        ])
-      }
+      // Todos los días aparecen plegados al cargar.
+      setExpandedDays([])
     }
 
     setLoadingDays(false)
@@ -147,16 +131,11 @@ function Itinerary() {
         currentDays.includes(dayId)
 
       if (isExpanded) {
-        return currentDays.filter(
-          (currentDayId) =>
-            currentDayId !== dayId
-        )
+        return []
       }
 
-      return [
-        ...currentDays,
-        dayId,
-      ]
+      // Solo se permite un día desplegado.
+      return [dayId]
     })
   }
 
@@ -166,7 +145,7 @@ function Itinerary() {
     }
 
     const dayNumbers = days.map(
-      (day) => day.day_number
+      (day) => Number(day.day_number)
     )
 
     return Math.max(...dayNumbers) + 1
@@ -310,23 +289,13 @@ function Itinerary() {
 
       return updatedDays.sort(
         (firstDay, secondDay) =>
-          firstDay.day_number -
-          secondDay.day_number
+          Number(firstDay.day_number) -
+          Number(secondDay.day_number)
       )
     })
 
-    setExpandedDays((currentDays) => {
-      if (
-        currentDays.includes(savedDay.id)
-      ) {
-        return currentDays
-      }
-
-      return [
-        ...currentDays,
-        savedDay.id,
-      ]
-    })
+    // Después de guardar, todos permanecen plegados.
+    setExpandedDays([])
 
     form.reset()
     setSavingDay(false)
@@ -373,12 +342,7 @@ function Itinerary() {
       )
     )
 
-    setExpandedDays((currentDays) =>
-      currentDays.filter(
-        (currentDayId) =>
-          currentDayId !== day.id
-      )
-    )
+    setExpandedDays([])
   }
 
   if (loadingDays) {
@@ -627,9 +591,7 @@ function Itinerary() {
                   onClick={() =>
                     toggleDay(day.id)
                   }
-                  aria-expanded={
-                    isExpanded
-                  }
+                  aria-expanded={isExpanded}
                 >
                   <span className="itinerary-day-number">
                     <small>DÍA</small>

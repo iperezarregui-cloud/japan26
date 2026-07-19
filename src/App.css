@@ -1709,3 +1709,104 @@ button {
       width: 100%;
     }
   }
+  /* Edición de líneas */
+
+.manual-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.manual-card-heading > div {
+  min-width: 0;
+}
+
+.manual-edit-button {
+  flex-shrink: 0;
+  padding: 6px 9px;
+  border: 0;
+  border-radius: 9px;
+  background: #f0f1f4;
+  color: #596171;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.manual-edit-button:hover {
+  background: #e2e4e9;
+  color: #172033;
+}
+
+/* Estados de reserva y pago */
+
+.booking-statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 13px;
+}
+
+.booking-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 31px;
+  padding: 0 10px;
+  border: 1px solid #e2e4e8;
+  border-radius: 10px;
+  background: #f5f6f8;
+  color: #747c89;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.booking-status span {
+  font-size: 13px;
+}
+
+.booking-status:hover {
+  border-color: #9bbca6;
+  background: #f0f8f2;
+  color: #467254;
+}
+
+.booking-status.selected {
+  border-color: #afd2ba;
+  background: #e9f7ed;
+  color: #347148;
+}
+
+.booking-status.paid:hover {
+  border-color: #e4c57a;
+  background: #fff9e8;
+  color: #80661e;
+}
+
+.booking-status.paid.selected {
+  border-color: #e2c66f;
+  background: #fff6d9;
+  color: #806314;
+}
+
+.booking-status:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+@media (max-width: 520px) {
+  .manual-card-heading {
+    gap: 8px;
+  }
+
+  .booking-statuses {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .booking-status {
+    justify-content: center;
+  }
+}

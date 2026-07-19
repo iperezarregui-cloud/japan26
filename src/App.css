@@ -1810,3 +1810,462 @@ button {
     justify-content: center;
   }
 }
+/* =====================================================
+   HOTELES Y ALOJAMIENTOS
+   ===================================================== */
+
+   .hotels-section {
+    display: grid;
+    gap: 18px;
+  }
+  
+  .hotels-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  
+  .hotels-heading .section-label {
+    margin: 0;
+  }
+  
+  .hotels-summary {
+    margin: 5px 0 0;
+    color: #9298a4;
+    font-size: 12px;
+  }
+  
+  /* Carga y errores */
+  
+  .hotels-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 32px 20px;
+    color: #7c8494;
+    font-size: 13px;
+  }
+  
+  .hotels-loading span {
+    font-size: 22px;
+  }
+  
+  .hotels-loading p {
+    margin: 0;
+  }
+  
+  .hotels-error {
+    margin: 0;
+  }
+  
+  /* Estado vacío */
+  
+  .hotels-empty {
+    padding: 42px 22px;
+    border: 2px dashed #e1e3e8;
+    border-radius: 22px;
+    background: #fbfbfc;
+    text-align: center;
+  }
+  
+  .hotels-empty > span {
+    display: block;
+    margin-bottom: 12px;
+    font-size: 36px;
+  }
+  
+  .hotels-empty h3 {
+    margin: 0 0 7px;
+    color: #172033;
+    font-size: 17px;
+  }
+  
+  .hotels-empty p {
+    max-width: 380px;
+    margin: 0 auto 19px;
+    color: #7c8494;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  
+  /* Formulario */
+  
+  .hotel-form {
+    display: grid;
+    gap: 16px;
+    padding: 22px;
+    border: 1px solid #dfe1e6;
+    border-radius: 22px;
+    background: #fbfbfc;
+  }
+  
+  .hotel-form-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+  }
+  
+  .hotel-form-heading h3 {
+    margin: 5px 0 0;
+    color: #172033;
+    font-size: 20px;
+  }
+  
+  .hotel-form label {
+    display: grid;
+    gap: 7px;
+    color: #4f5869;
+    font-size: 12px;
+    font-weight: 800;
+  }
+  
+  .hotel-form input,
+  .hotel-form select,
+  .hotel-form textarea {
+    width: 100%;
+    border: 1px solid #dfe1e6;
+    border-radius: 12px;
+    outline: none;
+    background: #ffffff;
+    color: #172033;
+    font: inherit;
+    font-size: 14px;
+  }
+  
+  .hotel-form input,
+  .hotel-form select {
+    min-height: 44px;
+    padding: 0 13px;
+  }
+  
+  .hotel-form textarea {
+    min-height: 90px;
+    padding: 12px 13px;
+    resize: vertical;
+  }
+  
+  .hotel-form input:focus,
+  .hotel-form select:focus,
+  .hotel-form textarea:focus {
+    border-color: #e84f5f;
+    box-shadow: 0 0 0 3px rgba(232, 79, 95, 0.1);
+  }
+  
+  .hotel-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 13px;
+  }
+  
+  /* Lista de alojamientos */
+  
+  .hotels-list {
+    display: grid;
+    gap: 13px;
+  }
+  
+  .hotel-card {
+    display: grid;
+    grid-template-columns: 54px minmax(0, 1fr);
+    gap: 15px;
+    padding: 19px;
+    border: 1px solid #e7e8ec;
+    border-radius: 21px;
+    background: #fbfbfc;
+    box-shadow: 0 5px 16px rgba(23, 32, 51, 0.04);
+  }
+  
+  .hotel-card-icon {
+    display: grid;
+    width: 52px;
+    height: 52px;
+    place-items: center;
+    border: 1px solid #ececf0;
+    border-radius: 16px;
+    background: #ffffff;
+    font-size: 25px;
+    box-shadow: 0 4px 12px rgba(23, 32, 51, 0.05);
+  }
+  
+  .hotel-card-information {
+    min-width: 0;
+  }
+  
+  .hotel-card-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+  }
+  
+  .hotel-card-heading > div {
+    min-width: 0;
+  }
+  
+  .hotel-city-label {
+    margin: 0 0 4px;
+    color: #e84f5f;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  
+  .hotel-card h3 {
+    margin: 0;
+    color: #172033;
+    font-size: 18px;
+    line-height: 1.3;
+  }
+  
+  .hotel-edit-button {
+    flex-shrink: 0;
+    padding: 7px 10px;
+    border: 0;
+    border-radius: 10px;
+    background: #eceef2;
+    color: #596171;
+    font-size: 10px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  
+  .hotel-edit-button:hover {
+    background: #dfe2e7;
+    color: #172033;
+  }
+  
+  /* Fechas y dirección */
+  
+  .hotel-dates {
+    margin: 10px 0 0;
+    color: #4f5869;
+    font-size: 12px;
+    font-weight: 800;
+  }
+  
+  .hotel-address {
+    margin: 8px 0 0;
+    color: #737b8c;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  
+  /* Estados reservado y pagado */
+  
+  .hotel-statuses {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 14px;
+  }
+  
+  .hotel-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 0 11px;
+    border: 1px solid #e2e4e8;
+    border-radius: 10px;
+    background: #f3f4f6;
+    color: #747c89;
+    font-size: 10px;
+    font-weight: 800;
+    cursor: pointer;
+    transition:
+      border-color 0.2s ease,
+      background 0.2s ease,
+      color 0.2s ease;
+  }
+  
+  .hotel-status span {
+    font-size: 13px;
+  }
+  
+  .hotel-status.reserved:hover {
+    border-color: #9bbca6;
+    background: #f0f8f2;
+    color: #467254;
+  }
+  
+  .hotel-status.reserved.selected {
+    border-color: #afd2ba;
+    background: #e9f7ed;
+    color: #347148;
+  }
+  
+  .hotel-status.paid:hover {
+    border-color: #e4c57a;
+    background: #fff9e8;
+    color: #80661e;
+  }
+  
+  .hotel-status.paid.selected {
+    border-color: #e2c66f;
+    background: #fff6d9;
+    color: #806314;
+  }
+  
+  .hotel-status:disabled {
+    cursor: wait;
+    opacity: 0.6;
+  }
+  
+  .hotel-updating {
+    margin: 7px 0 0;
+    color: #9298a4;
+    font-size: 10px;
+    font-weight: 700;
+  }
+  
+  /* Precio y confirmación */
+  
+  .hotel-details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+    margin-top: 14px;
+  }
+  
+  .hotel-details-grid > div {
+    display: grid;
+    gap: 3px;
+    padding: 11px;
+    border-radius: 12px;
+    background: #ffffff;
+  }
+  
+  .hotel-details-grid span {
+    color: #9298a4;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+  }
+  
+  .hotel-details-grid strong {
+    overflow-wrap: anywhere;
+    color: #172033;
+    font-size: 13px;
+  }
+  
+  /* Notas */
+  
+  .hotel-notes {
+    margin: 13px 0 0;
+    padding: 12px;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #687181;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+  
+  /* Enlaces */
+  
+  .hotel-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 13px;
+  }
+  
+  .hotel-links button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #e84f5f;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  
+  .hotel-links button:hover {
+    text-decoration: underline;
+  }
+  
+  /* Eliminar alojamiento */
+  
+  .hotel-delete-button {
+    margin-top: 14px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #bd5362;
+    font-size: 10px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  
+  .hotel-delete-button:hover {
+    text-decoration: underline;
+  }
+  
+  /* =====================================================
+     HOTELES EN MÓVIL
+     ===================================================== */
+  
+  @media (max-width: 520px) {
+    .hotels-heading {
+      display: grid;
+      grid-template-columns: 1fr;
+    }
+  
+    .hotels-heading .add-button {
+      width: 100%;
+    }
+  
+    .hotel-form {
+      padding: 18px 15px;
+    }
+  
+    .hotel-form-grid {
+      grid-template-columns: 1fr;
+    }
+  
+    .hotel-card {
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 11px;
+      padding: 15px;
+    }
+  
+    .hotel-card-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 13px;
+      font-size: 20px;
+    }
+  
+    .hotel-card-heading {
+      gap: 8px;
+    }
+  
+    .hotel-card h3 {
+      font-size: 16px;
+    }
+  
+    .hotel-statuses {
+      display: grid;
+      grid-template-columns: 1fr;
+    }
+  
+    .hotel-status {
+      justify-content: center;
+    }
+  
+    .hotel-details-grid {
+      grid-template-columns: 1fr;
+    }
+  
+    .hotel-links {
+      display: grid;
+      gap: 9px;
+    }
+  
+    .hotel-links button {
+      text-align: left;
+    }
+  }

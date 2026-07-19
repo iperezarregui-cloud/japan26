@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import Auth from './Auth'
 import Itinerary from './Itinerary'
+import Hotels from './Hotels'
 import { supabase } from './supabase'
 
 const cities = [
@@ -11,7 +12,6 @@ const cities = [
     name: 'Tokio',
     description:
       'Barrios, templos, miradores y gastronomía.',
-    hotel: 'Hotel pendiente de confirmar',
   },
   {
     id: 'hakone',
@@ -19,7 +19,6 @@ const cities = [
     name: 'Hakone',
     description:
       'Monte Fuji, naturaleza, lago y aguas termales.',
-    hotel: 'Hotel pendiente de confirmar',
   },
   {
     id: 'kyoto',
@@ -27,7 +26,6 @@ const cities = [
     name: 'Kioto',
     description:
       'Santuarios, jardines y calles tradicionales.',
-    hotel: 'Hotel pendiente de confirmar',
   },
   {
     id: 'nara',
@@ -35,7 +33,6 @@ const cities = [
     name: 'Nara',
     description:
       'Templos históricos, parques y ciervos.',
-    hotel: 'Hotel pendiente de confirmar',
   },
   {
     id: 'osaka',
@@ -43,7 +40,6 @@ const cities = [
     name: 'Osaka',
     description:
       'Castillo, comida callejera y vida nocturna.',
-    hotel: 'Hotel pendiente de confirmar',
   },
   {
     id: 'kobe',
@@ -51,7 +47,6 @@ const cities = [
     name: 'Kobe',
     description:
       'Puerto, gastronomía, barrios históricos y montaña.',
-    hotel: 'Hotel pendiente de confirmar',
   },
   {
     id: 'hiroshima',
@@ -59,7 +54,6 @@ const cities = [
     name: 'Hiroshima',
     description:
       'Historia, cultura, jardines y gastronomía.',
-    hotel: 'Hotel pendiente de confirmar',
   },
   {
     id: 'miyajima',
@@ -67,7 +61,6 @@ const cities = [
     name: 'Miyajima',
     description:
       'Santuario de Itsukushima, naturaleza y senderos.',
-    hotel: 'Hotel pendiente de confirmar',
   },
 ]
 
@@ -927,28 +920,10 @@ function App() {
             </nav>
 
             {citySection === 'hotel' && (
-              <section className="city-section">
-                <p className="section-label">
-                  ALOJAMIENTO
-                </p>
-
-                <article className="detail-card">
-                  <span className="detail-icon">
-                    🛏️
-                  </span>
-
-                  <div>
-                    <h3>
-                      Hotel en{' '}
-                      {selectedCity.name}
-                    </h3>
-
-                    <p>
-                      {selectedCity.hotel}
-                    </p>
-                  </div>
-                </article>
-              </section>
+              <Hotels
+                cityId={selectedCity.id}
+                cityName={selectedCity.name}
+              />
             )}
 
             {currentItemType && (
@@ -1187,6 +1162,7 @@ function App() {
                 {loadingActivities && (
                   <article className="empty-card">
                     <span>⏳</span>
+
                     <h3>
                       Cargando información...
                     </h3>
@@ -1254,6 +1230,11 @@ function App() {
                                 toggleActivityDone(
                                   activity
                                 )
+                              }
+                              aria-label={
+                                activity.done
+                                  ? 'Marcar como pendiente'
+                                  : 'Marcar como hecho'
                               }
                             >
                               {activity.done

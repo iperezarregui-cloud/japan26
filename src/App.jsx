@@ -3,6 +3,7 @@ import './App.css'
 import Auth from './Auth'
 import Itinerary from './Itinerary'
 import Hotels from './Hotels'
+import ActivityFilters from './ActivityFilters'
 import { supabase } from './supabase'
 
 const cities = [
@@ -143,20 +144,6 @@ const categoryIcons = {
   'Experiencia urbana': '🌃',
   Excursión: '🚆',
 }
-
-const tokyoNeighborhoods = [
-  'Shinjuku',
-  'Shibuya',
-  'Harajuku',
-  'Asakusa',
-  'Ueno',
-  'Akihabara',
-  'Ginza',
-  'Roppongi',
-  'Odaiba',
-  'Ikebukuro',
-  'Otros',
-]
 
 const priorityOrder = {
   essential: 1,
@@ -308,6 +295,21 @@ function App() {
   const [activityFilter, setActivityFilter] =
     useState('all')
 
+  const [
+    selectedNeighborhood,
+    setSelectedNeighborhood,
+  ] = useState('all')
+
+  const [
+    neighborhoodOptions,
+    setNeighborhoodOptions,
+  ] = useState([])
+
+  const [
+    activitySearchText,
+    setActivitySearchText,
+  ] = useState('')
+
   const selectedCity = cities.find(
     (city) => city.id === selectedCityId
   )
@@ -342,6 +344,9 @@ function App() {
   ])
 
   const visibleActivities = useMemo(() => {
+    const normalizedSearch =
+      activitySearchText.trim().toLowerCase()
+
     return citySectionActivities
       .filter((activity) => {
         if (activityFilter === 'pending') {
@@ -353,6 +358,42 @@ function App() {
         }
 
         return true
+      })
+      .filter((activity) => {
+        if (
+          selectedCityId !== 'tokyo' ||
+          selectedNeighborhood === 'all'
+        ) {
+          return true
+        }
+
+        if (selectedNeighborhood === 'none') {
+          return !activity.neighborhood
+        }
+
+        return (
+          activity.neighborhood ===
+          selectedNeighborhood
+        )
+      })
+      .filter((activity) => {
+        if (!normalizedSearch) {
+          return true
+        }
+
+        const searchableText = [
+          activity.name,
+          activity.description,
+          activity.category,
+          activity.neighborhood,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+
+        return searchableText.includes(
+          normalizedSearch
+        )
       })
       .sort((first, second) => {
         if (first.done !== second.done) {
@@ -366,7 +407,9 @@ function App() {
           const secondPriority =
             priorityOrder[second.priority] || 3
 
-          return firstPriority - secondPriority
+          if (firstPriority !== secondPriority) {
+            return firstPriority - secondPriority
+          }
         }
 
         if (
@@ -386,6 +429,9 @@ function App() {
   }, [
     citySectionActivities,
     activityFilter,
+    selectedCityId,
+    selectedNeighborhood,
+    activitySearchText,
   ])
 
   const pendingCount =
@@ -502,6 +548,8 @@ function App() {
     setShowActivityForm(false)
     setEditingActivity(null)
     setActivityFilter('all')
+    setSelectedNeighborhood('all')
+    setActivitySearchText('')
     setActivitiesError('')
   }
 
@@ -534,7 +582,25 @@ function App() {
     setShowActivityForm(false)
     setEditingActivity(null)
     setActivityFilter('all')
+    setSelectedNeighborhood('all')
+    setActivitySearchText('')
     setActivitiesError('')
+  }
+
+  function handleNeighborhoodsChange(
+    nextNeighborhoods
+  ) {
+    setNeighborhoodOptions(nextNeighborhoods)
+
+    if (
+      selectedNeighborhood !== 'all' &&
+      selectedNeighborhood !== 'none' &&
+      !nextNeighborhoods.includes(
+        selectedNeighborhood
+      )
+    ) {
+      setSelectedNeighborhood('all')
+    }
   }
 
   function openNewActivityForm() {
@@ -856,42 +922,37 @@ function App() {
               según el itinerario.
             </p>
 
-            {cities.map((city) => {
-              const assignedDays =
-                formatCityDays(
-                  city.id,
-                  itineraryDays
-                )
+            {cities.map((city) => (
+              <button
+                className="card city-card city-button"
+                key={city.id}
+                type="button"
+                onClick={() =>
+                  openCity(city.id)
+                }
+              >
+                <span className="city-emoji">
+                  {city.emoji}
+                </span>
 
-              return (
-                <button
-                  className="card city-card city-button"
-                  key={city.id}
-                  type="button"
-                  onClick={() =>
-                    openCity(city.id)
-                  }
-                >
-                  <span className="city-emoji">
-                    {city.emoji}
+                <div>
+                  <span className="city-days">
+                    {formatCityDays(
+                      city.id,
+                      itineraryDays
+                    )}
                   </span>
 
-                  <div>
-                    <span className="city-days">
-                      {assignedDays}
-                    </span>
+                  <h3>{city.name}</h3>
 
-                    <h3>{city.name}</h3>
+                  <p>{city.description}</p>
+                </div>
 
-                    <p>{city.description}</p>
-                  </div>
-
-                  <span className="arrow">
-                    ›
-                  </span>
-                </button>
-              )
-            })}
+                <span className="arrow">
+                  ›
+                </span>
+              </button>
+            ))}
           </section>
         )}
 
@@ -1022,52 +1083,26 @@ function App() {
                   </button>
                 </div>
 
-                <div className="activity-filters">
-                  <button
-                    className={
-                      activityFilter === 'all'
-                        ? 'selected'
-                        : ''
-                    }
-                    type="button"
-                    onClick={() =>
-                      setActivityFilter('all')
-                    }
-                  >
-                    Todos
-                  </button>
-
-                  <button
-                    className={
-                      activityFilter ===
-                      'pending'
-                        ? 'selected'
-                        : ''
-                    }
-                    type="button"
-                    onClick={() =>
-                      setActivityFilter(
-                        'pending'
-                      )
-                    }
-                  >
-                    Pendientes
-                  </button>
-
-                  <button
-                    className={
-                      activityFilter === 'done'
-                        ? 'selected'
-                        : ''
-                    }
-                    type="button"
-                    onClick={() =>
-                      setActivityFilter('done')
-                    }
-                  >
-                    Hechos
-                  </button>
-                </div>
+                <ActivityFilters
+                  cityId={selectedCityId}
+                  activityFilter={activityFilter}
+                  onActivityFilterChange={
+                    setActivityFilter
+                  }
+                  selectedNeighborhood={
+                    selectedNeighborhood
+                  }
+                  onNeighborhoodChange={
+                    setSelectedNeighborhood
+                  }
+                  onNeighborhoodsChange={
+                    handleNeighborhoodsChange
+                  }
+                  searchText={activitySearchText}
+                  onSearchTextChange={
+                    setActivitySearchText
+                  }
+                />
 
                 {showActivityForm && (
                   <form
@@ -1115,9 +1150,7 @@ function App() {
                         name="name"
                         type="text"
                         defaultValue={
-                          editingActivity
-                            ? editingActivity.name
-                            : ''
+                          editingActivity?.name || ''
                         }
                         placeholder={
                           currentItemType === 'food'
@@ -1128,33 +1161,26 @@ function App() {
                       />
                     </label>
 
-                    {selectedCityId ===
-                      'tokyo' && (
+                    {selectedCityId === 'tokyo' && (
                       <label>
                         Barrio de Tokio
 
                         <select
                           name="neighborhood"
                           defaultValue={
-                            editingActivity
-                              ? editingActivity.neighborhood ||
-                                ''
-                              : ''
+                            editingActivity?.neighborhood ||
+                            ''
                           }
                         >
                           <option value="">
-                            Seleccionar barrio
+                            Sin barrio
                           </option>
 
-                          {tokyoNeighborhoods.map(
+                          {neighborhoodOptions.map(
                             (neighborhood) => (
                               <option
-                                key={
-                                  neighborhood
-                                }
-                                value={
-                                  neighborhood
-                                }
+                                key={neighborhood}
+                                value={neighborhood}
                               >
                                 {neighborhood}
                               </option>
@@ -1171,10 +1197,8 @@ function App() {
                         <select
                           name="category"
                           defaultValue={
-                            editingActivity
-                              ? editingActivity.category ||
-                                ''
-                              : ''
+                            editingActivity?.category ||
+                            ''
                           }
                         >
                           <option value="">
@@ -1187,11 +1211,7 @@ function App() {
                                 key={category}
                                 value={category}
                               >
-                                {
-                                  categoryIcons[
-                                    category
-                                  ]
-                                }{' '}
+                                {categoryIcons[category]}{' '}
                                 {category}
                               </option>
                             )
@@ -1205,21 +1225,15 @@ function App() {
                         <select
                           name="priority"
                           defaultValue={
-                            editingActivity
-                              ? editingActivity.priority ||
-                                'medium'
-                              : 'medium'
+                            editingActivity?.priority ||
+                            'medium'
                           }
                         >
                           {priorityOptions.map(
                             (priority) => (
                               <option
-                                key={
-                                  priority.value
-                                }
-                                value={
-                                  priority.value
-                                }
+                                key={priority.value}
+                                value={priority.value}
                               >
                                 {priority.icon}{' '}
                                 {priority.label}
@@ -1238,10 +1252,9 @@ function App() {
                         type="number"
                         min="1"
                         defaultValue={
-                          editingActivity &&
-                          editingActivity.estimated_duration
-                            ? editingActivity.estimated_duration
-                            : ''
+                          editingActivity
+                            ?.estimated_duration ||
+                          ''
                         }
                         placeholder="Ej. 90"
                       />
@@ -1255,9 +1268,7 @@ function App() {
                         rows="3"
                         defaultValue={
                           editingActivity
-                            ? editingActivity.description ||
-                              ''
-                            : ''
+                            ?.description || ''
                         }
                         placeholder="Qué quieres ver o recordar..."
                       />
@@ -1270,10 +1281,7 @@ function App() {
                         name="link"
                         type="url"
                         defaultValue={
-                          editingActivity
-                            ? editingActivity.link ||
-                              ''
-                            : ''
+                          editingActivity?.link || ''
                         }
                         placeholder="https://maps.google.com/..."
                       />
@@ -1315,197 +1323,188 @@ function App() {
                 )}
 
                 {!loadingActivities &&
-                  visibleActivities.length ===
-                    0 && (
+                  visibleActivities.length === 0 && (
                     <article className="empty-card">
                       <span>
                         {currentSection.icon}
                       </span>
 
                       <h3>
-                        {
-                          currentSection.emptyTitle
-                        }
+                        {activitySearchText ||
+                        selectedNeighborhood !== 'all'
+                          ? 'No hay resultados'
+                          : currentSection.emptyTitle}
                       </h3>
 
                       <p>
-                        {
-                          currentSection.emptyText
-                        }
+                        {activitySearchText ||
+                        selectedNeighborhood !== 'all'
+                          ? 'Prueba con otra búsqueda o cambia los filtros.'
+                          : currentSection.emptyText}
                       </p>
                     </article>
                   )}
 
                 {!loadingActivities &&
-                  visibleActivities.map(
-                    (activity) => {
-                      const priority =
-                        getPriority(
-                          activity.priority
-                        )
+                  visibleActivities.map((activity) => {
+                    const priority = getPriority(
+                      activity.priority
+                    )
 
-                      const categoryIcon =
-                        getCategoryIcon(
-                          activity.category,
-                          activity.item_type
-                        )
+                    const categoryIcon =
+                      getCategoryIcon(
+                        activity.category,
+                        activity.item_type
+                      )
 
-                      return (
-                        <article
-                          className={
-                            activity.done
-                              ? 'activity-card activity-done'
-                              : 'activity-card'
-                          }
-                          key={activity.id}
-                        >
-                          <div className="activity-leading">
-                            <span className="category-icon">
-                              {categoryIcon}
-                            </span>
+                    return (
+                      <article
+                        className={
+                          activity.done
+                            ? 'activity-card activity-done'
+                            : 'activity-card'
+                        }
+                        key={activity.id}
+                      >
+                        <div className="activity-leading">
+                          <span className="category-icon">
+                            {categoryIcon}
+                          </span>
 
-                            <button
+                          <button
+                            className={
+                              activity.done
+                                ? 'done-button selected'
+                                : 'done-button'
+                            }
+                            type="button"
+                            onClick={() =>
+                              toggleActivityDone(
+                                activity
+                              )
+                            }
+                            aria-label={
+                              activity.done
+                                ? 'Marcar como pendiente'
+                                : 'Marcar como hecho'
+                            }
+                          >
+                            {activity.done
+                              ? '✓'
+                              : ''}
+                          </button>
+                        </div>
+
+                        <div className="activity-information">
+                          <div className="activity-title-row">
+                            <h3>
+                              {activity.name}
+                            </h3>
+
+                            <span
                               className={
-                                activity.done
-                                  ? 'done-button selected'
-                                  : 'done-button'
+                                'priority-badge priority-' +
+                                activity.priority
                               }
+                            >
+                              {priority.icon}{' '}
+                              {priority.label}
+                            </span>
+                          </div>
+
+                          <div className="activity-metadata">
+                            {activity.neighborhood && (
+                              <span>
+                                📍{' '}
+                                {activity.neighborhood}
+                              </span>
+                            )}
+
+                            {activity.category && (
+                              <span>
+                                {categoryIcon}{' '}
+                                {activity.category}
+                              </span>
+                            )}
+
+                            {activity.estimated_duration && (
+                              <span>
+                                ⏱️{' '}
+                                {
+                                  activity.estimated_duration
+                                }{' '}
+                                min
+                              </span>
+                            )}
+                          </div>
+
+                          {activity.description && (
+                            <p>
+                              {activity.description}
+                            </p>
+                          )}
+
+                          {activity.link && (
+                            <a
+                              href={activity.link}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Abrir en Google Maps
+                            </a>
+                          )}
+
+                          {activity.done && (
+                            <button
+                              className="restore-button"
                               type="button"
                               onClick={() =>
                                 toggleActivityDone(
                                   activity
                                 )
                               }
-                              aria-label={
-                                activity.done
-                                  ? 'Marcar como pendiente'
-                                  : 'Marcar como hecho'
-                              }
                             >
-                              {activity.done
-                                ? '✓'
-                                : ''}
+                              Marcar como pendiente
                             </button>
-                          </div>
+                          )}
+                        </div>
 
-                          <div className="activity-information">
-                            <div className="activity-title-row">
-                              <h3>
-                                {activity.name}
-                              </h3>
+                        <div className="activity-card-actions">
+                          <button
+                            className="activity-edit-button"
+                            type="button"
+                            onClick={() =>
+                              openEditActivityForm(
+                                activity
+                              )
+                            }
+                            aria-label={
+                              'Editar ' +
+                              activity.name
+                            }
+                          >
+                            ✎
+                          </button>
 
-                              <span
-                                className={
-                                  'priority-badge priority-' +
-                                  activity.priority
-                                }
-                              >
-                                {priority.icon}{' '}
-                                {priority.label}
-                              </span>
-                            </div>
-
-                            <div className="activity-metadata">
-                              {activity.neighborhood && (
-                                <span>
-                                  📍{' '}
-                                  {
-                                    activity.neighborhood
-                                  }
-                                </span>
-                              )}
-
-                              {activity.category && (
-                                <span>
-                                  {categoryIcon}{' '}
-                                  {
-                                    activity.category
-                                  }
-                                </span>
-                              )}
-
-                              {activity.estimated_duration && (
-                                <span>
-                                  ⏱️{' '}
-                                  {
-                                    activity.estimated_duration
-                                  }{' '}
-                                  min
-                                </span>
-                              )}
-                            </div>
-
-                            {activity.description && (
-                              <p>
-                                {
-                                  activity.description
-                                }
-                              </p>
-                            )}
-
-                            {activity.link && (
-                              <a
-                                href={activity.link}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                Abrir en Google Maps
-                              </a>
-                            )}
-
-                            {activity.done && (
-                              <button
-                                className="restore-button"
-                                type="button"
-                                onClick={() =>
-                                  toggleActivityDone(
-                                    activity
-                                  )
-                                }
-                              >
-                                Marcar como
-                                pendiente
-                              </button>
-                            )}
-                          </div>
-
-                          <div className="activity-card-actions">
-                            <button
-                              className="activity-edit-button"
-                              type="button"
-                              onClick={() =>
-                                openEditActivityForm(
-                                  activity
-                                )
-                              }
-                              aria-label={
-                                'Editar ' +
-                                activity.name
-                              }
-                            >
-                              ✎
-                            </button>
-
-                            <button
-                              className="delete-button"
-                              type="button"
-                              onClick={() =>
-                                deleteActivity(
-                                  activity
-                                )
-                              }
-                              aria-label={
-                                'Eliminar ' +
-                                activity.name
-                              }
-                            >
-                              ×
-                            </button>
-                          </div>
-                        </article>
-                      )
-                    }
-                  )}
+                          <button
+                            className="delete-button"
+                            type="button"
+                            onClick={() =>
+                              deleteActivity(
+                                activity
+                              )
+                            }
+                            aria-label={
+                              'Eliminar ' +
+                              activity.name
+                            }
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </article>
+                    )
+                  })}
               </section>
             )}
           </section>

@@ -3096,3 +3096,445 @@ button {
       width: 100%;
     }
   }
+  /* =====================================================
+   BUSCADOR Y FILTROS DE ACTIVIDADES
+   ===================================================== */
+
+.activity-tools {
+  display: grid;
+  gap: 14px;
+  margin: 14px 0 18px;
+}
+
+.activity-search {
+  display: grid;
+  gap: 7px;
+  color: #4f5869;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.activity-search-field {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 34px;
+  align-items: center;
+  min-height: 46px;
+  border: 1px solid #dfe1e6;
+  border-radius: 13px;
+  background: #ffffff;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.activity-search-field:focus-within {
+  border-color: #e84f5f;
+  box-shadow: 0 0 0 3px rgba(232, 79, 95, 0.1);
+}
+
+.activity-search-field > span {
+  color: #9298a4;
+  font-size: 18px;
+  line-height: 1;
+  text-align: center;
+}
+
+.activity-search-field input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 6px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #172033;
+  font: inherit;
+  font-size: 13px;
+}
+
+.activity-search-field input::placeholder {
+  color: #a1a7b1;
+}
+
+.activity-search-field button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #f0f1f4;
+  color: #737b8c;
+  font: inherit;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.activity-search-field button:hover {
+  background: #ffe8eb;
+  color: #c23e51;
+}
+
+/* =====================================================
+   BARRIOS DE TOKIO
+   ===================================================== */
+
+.neighborhoods-section {
+  display: grid;
+  gap: 13px;
+  padding: 15px;
+  border: 1px solid #e5e7eb;
+  border-radius: 17px;
+  background: #fbfbfc;
+}
+
+.neighborhoods-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.neighborhoods-toolbar > div {
+  min-width: 0;
+}
+
+.neighborhoods-toolbar .section-label {
+  margin: 0;
+}
+
+.neighborhoods-help {
+  margin: 4px 0 0;
+  color: #9298a4;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.manage-neighborhoods-button {
+  flex: 0 0 auto;
+  min-height: 35px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: #eceef2;
+  color: #596171;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.manage-neighborhoods-button:hover {
+  background: #dfe2e7;
+  color: #172033;
+}
+
+/* Filtro horizontal por barrio */
+
+.neighborhood-filter {
+  display: flex;
+  width: 100%;
+  gap: 7px;
+  overflow-x: auto;
+  padding: 2px 1px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #d6d9df transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+.neighborhood-filter::-webkit-scrollbar {
+  height: 5px;
+}
+
+.neighborhood-filter::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.neighborhood-filter::-webkit-scrollbar-thumb {
+  border-radius: 5px;
+  background: #d6d9df;
+}
+
+.neighborhood-filter button {
+  flex: 0 0 auto;
+  min-height: 35px;
+  padding: 0 12px;
+  border: 1px solid #e1e3e7;
+  border-radius: 11px;
+  background: #ffffff;
+  color: #737b8c;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.neighborhood-filter button:hover {
+  border-color: #cfd3da;
+  color: #172033;
+}
+
+.neighborhood-filter button.selected {
+  border-color: #172033;
+  background: #172033;
+  color: #ffffff;
+}
+
+/* Carga y errores */
+
+.neighborhoods-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px;
+  border-radius: 13px;
+  background: #f5f6f8;
+  color: #7c8494;
+  font-size: 12px;
+}
+
+.neighborhoods-loading p {
+  margin: 0;
+}
+
+.neighborhoods-error {
+  margin: 0;
+}
+
+/* =====================================================
+   GESTIÓN DE BARRIOS
+   ===================================================== */
+
+.neighborhoods-manager {
+  display: grid;
+  gap: 13px;
+  padding-top: 14px;
+  border-top: 1px solid #e4e6ea;
+}
+
+/* Formulario para crear barrio */
+
+.neighborhood-add-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: end;
+}
+
+.neighborhood-add-form label {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  color: #4f5869;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.neighborhood-add-form input,
+.neighborhood-edit-form input {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #dfe1e6;
+  border-radius: 11px;
+  outline: 0;
+  background: #ffffff;
+  color: #172033;
+  font: inherit;
+  font-size: 13px;
+}
+
+.neighborhood-add-form input:focus,
+.neighborhood-edit-form input:focus {
+  border-color: #e84f5f;
+  box-shadow: 0 0 0 3px rgba(232, 79, 95, 0.1);
+}
+
+.neighborhood-add-form .save-button {
+  width: auto;
+  min-width: 112px;
+  min-height: 40px;
+  padding: 0 14px;
+}
+
+/* Lista de barrios */
+
+.neighborhoods-list {
+  display: grid;
+  gap: 7px;
+}
+
+.neighborhood-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid #e7e8ec;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.neighborhood-row > strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #172033;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.neighborhood-row-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 5px;
+}
+
+.neighborhood-row-actions button,
+.neighborhood-edit-form button {
+  min-height: 30px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 8px;
+  background: #eceef2;
+  color: #596171;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.neighborhood-row-actions button:hover,
+.neighborhood-edit-form button:hover {
+  background: #dfe2e7;
+  color: #172033;
+}
+
+.neighborhood-row-actions button:disabled,
+.neighborhood-edit-form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.neighborhood-row-actions .neighborhood-delete-button {
+  background: #ffe8eb;
+  color: #bd5362;
+}
+
+.neighborhood-row-actions .neighborhood-delete-button:hover {
+  background: #ffd9df;
+  color: #a83d4d;
+}
+
+/* Formulario para renombrar barrio */
+
+.neighborhood-edit-form {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 6px;
+  align-items: center;
+}
+
+/* =====================================================
+   ADAPTACIÓN PARA MÓVIL
+   ===================================================== */
+
+@media (max-width: 520px) {
+  .activity-tools {
+    gap: 12px;
+  }
+
+  .activity-search-field {
+    grid-template-columns: 29px minmax(0, 1fr) 32px;
+  }
+
+  .activity-search-field input {
+    font-size: 12px;
+  }
+
+  .neighborhoods-section {
+    padding: 13px;
+  }
+
+  .neighborhoods-toolbar {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .manage-neighborhoods-button {
+    width: 100%;
+    min-height: 39px;
+  }
+
+  .neighborhood-filter {
+    margin-right: -3px;
+    padding-bottom: 9px;
+  }
+
+  .neighborhood-filter button {
+    min-height: 37px;
+    padding: 0 11px;
+  }
+
+  .neighborhood-add-form {
+    grid-template-columns: 1fr;
+  }
+
+  .neighborhood-add-form .save-button {
+    width: 100%;
+    min-height: 42px;
+  }
+
+  .neighborhood-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .neighborhood-row > strong {
+    width: 100%;
+    white-space: normal;
+  }
+
+  .neighborhood-row-actions {
+    display: grid;
+    width: 100%;
+    grid-template-columns:
+      minmax(36px, 0.6fr)
+      minmax(36px, 0.6fr)
+      minmax(65px, 1fr)
+      minmax(70px, 1fr);
+  }
+
+  .neighborhood-row-actions button {
+    width: 100%;
+    min-height: 34px;
+    padding: 0 5px;
+  }
+
+  .neighborhood-edit-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .neighborhood-edit-form input {
+    grid-column: 1 / -1;
+  }
+
+  .neighborhood-edit-form button {
+    min-height: 35px;
+  }
+}
+
+@media (max-width: 360px) {
+  .neighborhood-row-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+}

@@ -4885,3 +4885,69 @@ button {
       grid-template-columns: 1fr;
     }
   }
+  /* =====================================================
+   ACCESO CON CONTRASEÑA
+   ===================================================== */
+
+.auth-password-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  overflow: hidden;
+  border: 1px solid #dfe1e6;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.auth-password-field:focus-within {
+  border-color: #e84f5f;
+  box-shadow: 0 0 0 3px rgba(232, 79, 95, 0.1);
+}
+
+.auth-password-field input {
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.auth-password-field input:focus {
+  border: 0;
+  box-shadow: none;
+}
+
+.auth-password-field button {
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: #e84f5f;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.auth-secondary-button {
+  width: 100%;
+  min-height: 40px;
+  margin-top: 12px;
+  padding: 0 12px;
+  border: 1px solid #dfe1e6;
+  border-radius: 11px;
+  background: #f7f8fa;
+  color: #596171;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.auth-secondary-button:hover {
+  border-color: #cfd3da;
+  background: #eceef2;
+  color: #172033;
+}
+
+.auth-secondary-button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}

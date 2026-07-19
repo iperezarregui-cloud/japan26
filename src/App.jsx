@@ -50,7 +50,8 @@ const sections = {
     singular: 'restaurante',
     icon: '🍜',
     emptyTitle: 'Aún no hay restaurantes añadidos',
-    emptyText: 'Añade restaurantes, mercados y platos que quieras probar.',
+    emptyText:
+      'Añade restaurantes, mercados y platos que quieras probar.',
   },
 }
 
@@ -92,6 +93,21 @@ const categoryOptions = [
   'Excursión',
 ]
 
+const categoryIcons = {
+  'Templo o santuario': '⛩️',
+  Museo: '🏛️',
+  Parque: '🌳',
+  Mirador: '🌇',
+  Mercado: '🏮',
+  Barrio: '🏙️',
+  Paseo: '🚶',
+  Compras: '🛍️',
+  Cultura: '🎭',
+  Gastronomía: '🍜',
+  'Experiencia urbana': '🌃',
+  Excursión: '🚆',
+}
+
 const tokyoNeighborhoods = [
   'Shinjuku',
   'Shibuya',
@@ -121,18 +137,39 @@ function getPriority(priority) {
   )
 }
 
+function getCategoryIcon(category, itemType) {
+  if (category && categoryIcons[category]) {
+    return categoryIcons[category]
+  }
+
+  if (itemType === 'food') {
+    return '🍽️'
+  }
+
+  if (itemType === 'place') {
+    return '📍'
+  }
+
+  return '✨'
+}
+
 function App() {
   const [session, setSession] = useState(null)
-  const [checkingSession, setCheckingSession] = useState(true)
+  const [checkingSession, setCheckingSession] =
+    useState(true)
 
-  const [activeTab, setActiveTab] = useState('itinerary')
-  const [selectedCityId, setSelectedCityId] = useState(null)
-  const [citySection, setCitySection] = useState('hotel')
+  const [activeTab, setActiveTab] =
+    useState('itinerary')
+  const [selectedCityId, setSelectedCityId] =
+    useState(null)
+  const [citySection, setCitySection] =
+    useState('hotel')
 
   const [activities, setActivities] = useState([])
   const [loadingActivities, setLoadingActivities] =
     useState(false)
-  const [activitiesError, setActivitiesError] = useState('')
+  const [activitiesError, setActivitiesError] =
+    useState('')
 
   const [showActivityForm, setShowActivityForm] =
     useState(false)
@@ -158,17 +195,20 @@ function App() {
     ? sections[currentItemType]
     : null
 
-  const visibleActivities = useMemo(() => {
+  const citySectionActivities = useMemo(() => {
     if (!currentItemType || !selectedCityId) {
       return []
     }
 
-    return activities
-      .filter(
-        (activity) =>
-          activity.city === selectedCityId &&
-          activity.item_type === currentItemType
-      )
+    return activities.filter(
+      (activity) =>
+        activity.city === selectedCityId &&
+        activity.item_type === currentItemType
+    )
+  }, [activities, selectedCityId, currentItemType])
+
+  const visibleActivities = useMemo(() => {
+    return citySectionActivities
       .filter((activity) => {
         if (activityFilter === 'pending') {
           return !activity.done
@@ -192,7 +232,10 @@ function App() {
           )
         }
 
-        if (first.completed_at && second.completed_at) {
+        if (
+          first.completed_at &&
+          second.completed_at
+        ) {
           return (
             new Date(second.completed_at) -
             new Date(first.completed_at)
@@ -201,18 +244,13 @@ function App() {
 
         return first.name.localeCompare(second.name)
       })
-  }, [
-    activities,
-    selectedCityId,
-    currentItemType,
-    activityFilter,
-  ])
+  }, [citySectionActivities, activityFilter])
 
-  const pendingCount = visibleActivities.filter(
+  const pendingCount = citySectionActivities.filter(
     (activity) => !activity.done
   ).length
 
-  const doneCount = visibleActivities.filter(
+  const doneCount = citySectionActivities.filter(
     (activity) => activity.done
   ).length
 
@@ -282,6 +320,13 @@ function App() {
     }
   }
 
+  function resetCityView() {
+    setCitySection('hotel')
+    setShowActivityForm(false)
+    setActivityFilter('all')
+    setActivitiesError('')
+  }
+
   function changeTab(tab) {
     setActiveTab(tab)
     setSelectedCityId(null)
@@ -296,13 +341,6 @@ function App() {
   function goBackToCities() {
     setSelectedCityId(null)
     resetCityView()
-  }
-
-  function resetCityView() {
-    setCitySection('hotel')
-    setShowActivityForm(false)
-    setActivityFilter('all')
-    setActivitiesError('')
   }
 
   function changeCitySection(section) {
@@ -349,10 +387,12 @@ function App() {
         formData.get('link') || ''
       ).trim(),
       category:
-        String(formData.get('category') || '').trim() ||
-        null,
-      priority:
-        String(formData.get('priority') || 'medium'),
+        String(
+          formData.get('category') || ''
+        ).trim() || null,
+      priority: String(
+        formData.get('priority') || 'medium'
+      ),
       neighborhood:
         selectedCityId === 'tokyo'
           ? String(
@@ -394,6 +434,7 @@ function App() {
 
   async function toggleActivityDone(activity) {
     const nextDone = !activity.done
+
     const completedAt = nextDone
       ? new Date().toISOString()
       : null
@@ -498,7 +539,9 @@ function App() {
       <section className="tabs">
         <button
           className={`tab ${
-            activeTab === 'itinerary' ? 'active' : ''
+            activeTab === 'itinerary'
+              ? 'active'
+              : ''
           }`}
           onClick={() => changeTab('itinerary')}
         >
@@ -507,7 +550,9 @@ function App() {
 
         <button
           className={`tab ${
-            activeTab === 'cities' ? 'active' : ''
+            activeTab === 'cities'
+              ? 'active'
+              : ''
           }`}
           onClick={() => changeTab('cities')}
         >
@@ -521,8 +566,9 @@ function App() {
           <h2>Itinerario por días</h2>
 
           <p>
-            Aquí añadiremos los días plegables, las actividades
-            vinculadas, los transportes y las líneas manuales.
+            Aquí añadiremos los días plegables, las
+            actividades vinculadas, los transportes y
+            las líneas manuales.
           </p>
 
           <article className="card">
@@ -531,8 +577,8 @@ function App() {
             <div>
               <h3>Llegada a Japón</h3>
               <p>
-                Este apartado será editable y tendrá detalle
-                horario al desplegar cada día.
+                Este apartado será editable y tendrá
+                detalle horario al desplegar cada día.
               </p>
             </div>
           </article>
@@ -541,12 +587,15 @@ function App() {
 
       {activeTab === 'cities' && !selectedCity && (
         <section className="content">
-          <p className="date">DESTINOS DEL VIAJE</p>
+          <p className="date">
+            DESTINOS DEL VIAJE
+          </p>
+
           <h2>Ciudades</h2>
 
           <p>
-            Consulta hoteles, planes, lugares de interés y
-            restaurantes.
+            Consulta hoteles, planes, lugares de interés
+            y restaurantes.
           </p>
 
           {cities.map((city) => (
@@ -600,9 +649,13 @@ function App() {
           <nav className="city-tabs">
             <button
               className={
-                citySection === 'hotel' ? 'selected' : ''
+                citySection === 'hotel'
+                  ? 'selected'
+                  : ''
               }
-              onClick={() => changeCitySection('hotel')}
+              onClick={() =>
+                changeCitySection('hotel')
+              }
             >
               🛏️
               <span>Hotel</span>
@@ -610,9 +663,13 @@ function App() {
 
             <button
               className={
-                citySection === 'plans' ? 'selected' : ''
+                citySection === 'plans'
+                  ? 'selected'
+                  : ''
               }
-              onClick={() => changeCitySection('plans')}
+              onClick={() =>
+                changeCitySection('plans')
+              }
             >
               ✨
               <span>Planes</span>
@@ -620,9 +677,13 @@ function App() {
 
             <button
               className={
-                citySection === 'places' ? 'selected' : ''
+                citySection === 'places'
+                  ? 'selected'
+                  : ''
               }
-              onClick={() => changeCitySection('places')}
+              onClick={() =>
+                changeCitySection('places')
+              }
             >
               ⛩️
               <span>Lugares</span>
@@ -630,9 +691,13 @@ function App() {
 
             <button
               className={
-                citySection === 'food' ? 'selected' : ''
+                citySection === 'food'
+                  ? 'selected'
+                  : ''
               }
-              onClick={() => changeCitySection('food')}
+              onClick={() =>
+                changeCitySection('food')
+              }
             >
               🍜
               <span>Comer</span>
@@ -646,7 +711,9 @@ function App() {
               </p>
 
               <article className="detail-card">
-                <span className="detail-icon">🛏️</span>
+                <span className="detail-icon">
+                  🛏️
+                </span>
 
                 <div>
                   <h3>
@@ -668,7 +735,8 @@ function App() {
                   </p>
 
                   <p className="activity-summary">
-                    {pendingCount} pendientes · {doneCount} hechos
+                    {pendingCount} pendientes ·{' '}
+                    {doneCount} hechos
                   </p>
                 </div>
 
@@ -785,6 +853,11 @@ function App() {
                               key={category}
                               value={category}
                             >
+                              {
+                                categoryIcons[
+                                  category
+                                ]
+                              }{' '}
                               {category}
                             </option>
                           )
@@ -862,6 +935,7 @@ function App() {
                   <strong>
                     Ha ocurrido un problema
                   </strong>
+
                   <p>{activitiesError}</p>
                 </div>
               )}
@@ -873,8 +947,14 @@ function App() {
                 </article>
               ) : visibleActivities.length === 0 ? (
                 <article className="empty-card">
-                  <span>{currentSection.icon}</span>
-                  <h3>{currentSection.emptyTitle}</h3>
+                  <span>
+                    {currentSection.icon}
+                  </span>
+
+                  <h3>
+                    {currentSection.emptyTitle}
+                  </h3>
+
                   <p>{currentSection.emptyText}</p>
                 </article>
               ) : (
@@ -882,6 +962,12 @@ function App() {
                   const priority = getPriority(
                     activity.priority
                   )
+
+                  const categoryIcon =
+                    getCategoryIcon(
+                      activity.category,
+                      activity.item_type
+                    )
 
                   return (
                     <article
@@ -892,23 +978,31 @@ function App() {
                       }`}
                       key={activity.id}
                     >
-                      <button
-                        className={`done-button ${
-                          activity.done
-                            ? 'selected'
-                            : ''
-                        }`}
-                        onClick={() =>
-                          toggleActivityDone(activity)
-                        }
-                        aria-label={
-                          activity.done
-                            ? `Marcar ${activity.name} como pendiente`
-                            : `Marcar ${activity.name} como hecho`
-                        }
-                      >
-                        {activity.done ? '✓' : ''}
-                      </button>
+                      <div className="activity-leading">
+                        <span className="category-icon">
+                          {categoryIcon}
+                        </span>
+
+                        <button
+                          className={`done-button ${
+                            activity.done
+                              ? 'selected'
+                              : ''
+                          }`}
+                          onClick={() =>
+                            toggleActivityDone(
+                              activity
+                            )
+                          }
+                          aria-label={
+                            activity.done
+                              ? `Marcar ${activity.name} como pendiente`
+                              : `Marcar ${activity.name} como hecho`
+                          }
+                        >
+                          {activity.done ? '✓' : ''}
+                        </button>
+                      </div>
 
                       <div className="activity-information">
                         <div className="activity-title-row">
@@ -925,12 +1019,14 @@ function App() {
                         <div className="activity-metadata">
                           {activity.neighborhood && (
                             <span>
-                              📍 {activity.neighborhood}
+                              📍{' '}
+                              {activity.neighborhood}
                             </span>
                           )}
 
                           {activity.category && (
                             <span>
+                              {categoryIcon}{' '}
                               {activity.category}
                             </span>
                           )}
@@ -938,14 +1034,18 @@ function App() {
                           {activity.estimated_duration && (
                             <span>
                               ⏱️{' '}
-                              {activity.estimated_duration}{' '}
+                              {
+                                activity.estimated_duration
+                              }{' '}
                               min
                             </span>
                           )}
                         </div>
 
                         {activity.description && (
-                          <p>{activity.description}</p>
+                          <p>
+                            {activity.description}
+                          </p>
                         )}
 
                         {activity.link && (
@@ -962,7 +1062,9 @@ function App() {
                           <button
                             className="restore-button"
                             onClick={() =>
-                              toggleActivityDone(activity)
+                              toggleActivityDone(
+                                activity
+                              )
                             }
                           >
                             Marcar como pendiente

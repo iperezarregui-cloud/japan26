@@ -76,7 +76,7 @@ const sections = {
       'Añade lugares, actividades, excursiones y experiencias.',
   },
   food: {
-    label: 'Comer',
+    label: 'Comer y beber',
     singular: 'restaurante',
     icon: '🍜',
     emptyTitle: 'Aún no hay restaurantes añadidos',
@@ -108,19 +108,31 @@ const priorityOptions = [
   },
 ]
 
-const categoryOptions = [
-  'Templo o santuario',
-  'Museo',
-  'Parque',
-  'Mirador',
-  'Mercado',
+const placeCategoryOptions = [
   'Barrio',
-  'Paseo',
   'Compras',
   'Cultura',
-  'Gastronomía',
-  'Experiencia urbana',
   'Excursión',
+  'Experiencia urbana',
+  'Gastronomía',
+  'Mercado',
+  'Mirador',
+  'Museo',
+  'Parque',
+  'Paseo',
+  'Templo o santuario',
+]
+
+const foodCategoryOptions = [
+  'Ambiente',
+  'Café',
+  'Carne',
+  'Cócteles',
+  'Especialidad',
+  'Pescado',
+  'Ramen',
+  'Sushi',
+  'Tomar algo',
 ]
 
 const categoryIcons = {
@@ -136,6 +148,15 @@ const categoryIcons = {
   Gastronomía: '🍜',
   'Experiencia urbana': '🌃',
   Excursión: '🚆',
+  Ambiente: '🎶',
+  Café: '☕',
+  Carne: '🥩',
+  Cócteles: '🍸',
+  Especialidad: '⭐',
+  Pescado: '🐟',
+  Ramen: '🍜',
+  Sushi: '🍣',
+  'Tomar algo': '🍻',
 }
 
 const priorityOrder = {
@@ -329,6 +350,11 @@ const [
   const currentSection = currentItemType
     ? sections[currentItemType]
     : null
+
+  const currentCategoryOptions =
+    currentItemType === 'food'
+      ? foodCategoryOptions
+      : placeCategoryOptions
 
   const citySectionActivities = useMemo(() => {
     if (!selectedCityId || !currentItemType) {
@@ -1142,7 +1168,7 @@ const [
                 }
               >
                 🍜
-                <span>Comer</span>
+                <span>Comer y beber</span>
               </button>
             </nav>
 
@@ -1305,7 +1331,7 @@ const [
                             Sin categoría
                           </option>
 
-                          {categoryOptions.map(
+                          {currentCategoryOptions.map(
                             (category) => (
                               <option
                                 key={category}

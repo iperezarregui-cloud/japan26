@@ -4968,3 +4968,56 @@ button {
   color: #d92f45;
   text-decoration: underline;
 }
+/* =====================================================
+TRES PESTANAS DE CIUDAD CENTRADAS
+===================================================== */
+.city-tabs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.city-tabs button {
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.city-tabs button span {
+  width: 100%;
+  text-align: center;
+}
+
+
+/* =====================================================
+PESTANAS DE CIUDAD: TRES COLUMNAS Y TEXTO CENTRADO
+===================================================== */
+.city-tabs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.city-tabs button {
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.city-tabs button span {
+  width: 100%;
+  line-height: 1.2;
+  text-align: center;
+  white-space: normal;
+}
+
+@media (max-width: 390px) {
+  .city-tabs button {
+    padding-right: 2px;
+    padding-left: 2px;
+  }
+
+  .city-tabs button span {
+    font-size: 9px;
+  }
+}

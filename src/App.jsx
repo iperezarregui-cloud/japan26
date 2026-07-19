@@ -4,6 +4,7 @@ import './App.css'
 function App() {
   const [activeTab, setActiveTab] = useState('itinerary')
   const [selectedCity, setSelectedCity] = useState(null)
+  const [citySection, setCitySection] = useState('hotel')
 
   const cities = [
     {
@@ -50,6 +51,17 @@ function App() {
   function changeTab(tab) {
     setActiveTab(tab)
     setSelectedCity(null)
+    setCitySection('hotel')
+  }
+
+  function openCity(city) {
+    setSelectedCity(city)
+    setCitySection('hotel')
+  }
+
+  function goBackToCities() {
+    setSelectedCity(null)
+    setCitySection('hotel')
   }
 
   return (
@@ -119,19 +131,25 @@ function App() {
           <h2>Ciudades</h2>
 
           <p>
-            Pulsa una ciudad para consultar sus hoteles y planes.
+            Pulsa una ciudad para consultar el hotel, los planes,
+            los lugares de interés y los restaurantes.
           </p>
 
           {cities.map((city) => (
             <button
               className="card city-card city-button"
               key={city.id}
-              onClick={() => setSelectedCity(city)}
+              onClick={() => openCity(city)}
             >
-              <span className="city-emoji">{city.emoji}</span>
+              <span className="city-emoji">
+                {city.emoji}
+              </span>
 
               <div>
-                <span className="city-days">{city.days}</span>
+                <span className="city-days">
+                  {city.days}
+                </span>
+
                 <h3>{city.name}</h3>
                 <p>{city.description}</p>
               </div>
@@ -146,7 +164,7 @@ function App() {
         <section className="content">
           <button
             className="back-button"
-            onClick={() => setSelectedCity(null)}
+            onClick={goBackToCities}
           >
             ← Volver a ciudades
           </button>
@@ -157,38 +175,143 @@ function App() {
             </span>
 
             <div>
-              <p className="date">{selectedCity.days}</p>
+              <p className="date">
+                {selectedCity.days}
+              </p>
+
               <h2>{selectedCity.name}</h2>
             </div>
           </div>
 
-          <section className="city-section">
-            <p className="section-label">HOTEL</p>
+          <nav className="city-tabs">
+            <button
+              className={
+                citySection === 'hotel' ? 'selected' : ''
+              }
+              onClick={() => setCitySection('hotel')}
+            >
+              🛏️
+              <span>Hotel</span>
+            </button>
 
-            <article className="detail-card">
-              <span className="detail-icon">🛏️</span>
+            <button
+              className={
+                citySection === 'plans' ? 'selected' : ''
+              }
+              onClick={() => setCitySection('plans')}
+            >
+              ✨
+              <span>Planes</span>
+            </button>
 
-              <div>
-                <h3>Alojamiento</h3>
-                <p>{selectedCity.hotel}</p>
-              </div>
-            </article>
-          </section>
+            <button
+              className={
+                citySection === 'places' ? 'selected' : ''
+              }
+              onClick={() => setCitySection('places')}
+            >
+              ⛩️
+              <span>Lugares</span>
+            </button>
 
-          <section className="city-section">
-            <p className="section-label">PLANES</p>
+            <button
+              className={
+                citySection === 'food' ? 'selected' : ''
+              }
+              onClick={() => setCitySection('food')}
+            >
+              🍜
+              <span>Comer</span>
+            </button>
+          </nav>
 
-            {selectedCity.plans.map((plan, index) => (
-              <article className="detail-card" key={plan}>
-                <span className="plan-number">{index + 1}</span>
+          {citySection === 'hotel' && (
+            <section className="city-section">
+              <p className="section-label">
+                ALOJAMIENTO
+              </p>
+
+              <article className="detail-card">
+                <span className="detail-icon">🛏️</span>
 
                 <div>
-                  <h3>{plan}</h3>
-                  <p>Información pendiente de completar.</p>
+                  <h3>
+                    Hotel en {selectedCity.name}
+                  </h3>
+
+                  <p>{selectedCity.hotel}</p>
                 </div>
               </article>
-            ))}
-          </section>
+            </section>
+          )}
+
+          {citySection === 'plans' && (
+            <section className="city-section">
+              <p className="section-label">
+                PLANES
+              </p>
+
+              {selectedCity.plans.map((plan, index) => (
+                <article
+                  className="detail-card"
+                  key={plan}
+                >
+                  <span className="plan-number">
+                    {index + 1}
+                  </span>
+
+                  <div>
+                    <h3>{plan}</h3>
+                    <p>
+                      Información pendiente de completar.
+                    </p>
+                  </div>
+                </article>
+              ))}
+            </section>
+          )}
+
+          {citySection === 'places' && (
+            <section className="city-section">
+              <p className="section-label">
+                LUGARES DE INTERÉS
+              </p>
+
+              <article className="empty-card">
+                <span>📍</span>
+
+                <h3>
+                  Aún no hay lugares añadidos
+                </h3>
+
+                <p>
+                  Aquí guardaremos templos, barrios,
+                  museos y miradores.
+                </p>
+              </article>
+            </section>
+          )}
+
+          {citySection === 'food' && (
+            <section className="city-section">
+              <p className="section-label">
+                RESTAURANTES Y COMIDA
+              </p>
+
+              <article className="empty-card">
+                <span>🍜</span>
+
+                <h3>
+                  Aún no hay restaurantes añadidos
+                </h3>
+
+                <p>
+                  Aquí guardaremos restaurantes y
+                  platos que quieras probar.
+                </p>
+              </article>
+            </section>
+          )}
         </section>
       )}
     </main>

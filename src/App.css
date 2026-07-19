@@ -341,3 +341,76 @@ button {
   font-size: 13px;
   font-weight: 800;
 }
+.city-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 26px;
+  padding: 6px;
+  border-radius: 18px;
+  background: #f1f2f5;
+}
+
+.city-tabs button {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 11px 4px;
+  border: 0;
+  border-radius: 13px;
+  background: transparent;
+  color: #737b8c;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+.city-tabs button span {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.city-tabs button.selected {
+  background: #172033;
+  color: #ffffff;
+  box-shadow: 0 5px 14px rgba(23, 32, 51, 0.16);
+}
+
+.empty-card {
+  padding: 35px 20px;
+  border: 2px dashed #e3e4e8;
+  border-radius: 20px;
+  background: #fbfbfc;
+  text-align: center;
+}
+
+.empty-card > span {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 30px;
+}
+
+.empty-card h3 {
+  margin: 0 0 7px;
+  color: #172033;
+  font-size: 16px;
+}
+
+.empty-card p {
+  max-width: 360px;
+  margin: 0 auto;
+  color: #7c8494;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@media (max-width: 390px) {
+  .city-tabs button {
+    font-size: 15px;
+  }
+
+  .city-tabs button span {
+    font-size: 10px;
+  }
+}

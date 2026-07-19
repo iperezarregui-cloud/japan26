@@ -82,18 +82,75 @@ function formatTravelDate(dateValue) {
   }).format(travelDate)
 }
 
-function Itinerary() {
+function Itinerary({
+  requestedDayId = null,
+  onRequestedDayOpened,
+}) {
   const [days, setDays] = useState([])
-  const [expandedDays, setExpandedDays] = useState([])
-  const [loadingDays, setLoadingDays] = useState(true)
-  const [savingDay, setSavingDay] = useState(false)
-  const [showDayForm, setShowDayForm] = useState(false)
-  const [editingDay, setEditingDay] = useState(null)
-  const [errorMessage, setErrorMessage] = useState('')
+  const [expandedDays, setExpandedDays] =
+    useState([])
+
+  const [loadingDays, setLoadingDays] =
+    useState(true)
+
+  const [savingDay, setSavingDay] =
+    useState(false)
+
+  const [showDayForm, setShowDayForm] =
+    useState(false)
+
+  const [editingDay, setEditingDay] =
+    useState(null)
+
+  const [errorMessage, setErrorMessage] =
+    useState('')
 
   useEffect(() => {
     loadDays()
   }, [])
+
+  useEffect(() => {
+    if (
+      requestedDayId === null ||
+      requestedDayId === undefined ||
+      days.length === 0
+    ) {
+      return
+    }
+
+    const requestedId = String(requestedDayId)
+
+    const requestedDay = days.find(
+      (day) => String(day.id) === requestedId
+    )
+
+    if (!requestedDay) {
+      return
+    }
+
+    setExpandedDays([requestedDay.id])
+
+    const scrollTimer = window.setTimeout(() => {
+      const dayElement = document.getElementById(
+        'itinerary-day-' + requestedDay.id
+      )
+
+      if (dayElement) {
+        dayElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        })
+      }
+
+      if (onRequestedDayOpened) {
+        onRequestedDayOpened()
+      }
+    }, 200)
+
+    return () => {
+      window.clearTimeout(scrollTimer)
+    }
+  }, [requestedDayId, days])
 
   async function loadDays() {
     setLoadingDays(true)
@@ -118,7 +175,10 @@ function Itinerary() {
     } else {
       setDays(result.data || [])
 
-      // Todos los días aparecen plegados al cargar.
+      /*
+       * Todos los días permanecen plegados
+       * cuando se entra normalmente al itinerario.
+       */
       setExpandedDays([])
     }
 
@@ -134,7 +194,9 @@ function Itinerary() {
         return []
       }
 
-      // Solo se permite un día desplegado.
+      /*
+       * Solo puede permanecer abierto un día.
+       */
       return [dayId]
     })
   }
@@ -144,9 +206,15 @@ function Itinerary() {
       return 1
     }
 
-    const dayNumbers = days.map(
-      (day) => Number(day.day_number)
-    )
+    const dayNumbers = days
+      .map((day) => Number(day.day_number))
+      .filter((dayNumber) =>
+        Number.isFinite(dayNumber)
+      )
+
+    if (dayNumbers.length === 0) {
+      return 1
+    }
 
     return Math.max(...dayNumbers) + 1
   }
@@ -209,9 +277,31 @@ function Itinerary() {
       formData.get('summary') || ''
     ).trim()
 
-    if (!dayNumber || !title) {
+    if (!dayNumber || dayNumber < 1) {
       setErrorMessage(
-        'El número de día y el título son obligatorios.'
+        'El número de día debe ser válido.'
+      )
+
+      return
+    }
+
+    if (!title) {
+      setErrorMessage(
+        'El título del día es obligatorio.'
+      )
+
+      return
+    }
+
+    const duplicatedDay = days.some(
+      (day) =>
+        Number(day.day_number) === dayNumber &&
+        day.id !== editingDay?.id
+    )
+
+    if (duplicatedDay) {
+      setErrorMessage(
+        'Ya existe un día con ese número.'
       )
 
       return
@@ -257,7 +347,8 @@ function Itinerary() {
         )
       } else {
         setErrorMessage(
-          'No se pudo guardar el día.'
+          'No se pudo guardar el día: ' +
+            result.error.message
         )
       }
 
@@ -271,15 +362,13 @@ function Itinerary() {
       let updatedDays
 
       if (editingDay) {
-        updatedDays = currentDays.map(
-          (day) => {
-            if (day.id === savedDay.id) {
-              return savedDay
-            }
-
-            return day
+        updatedDays = currentDays.map((day) => {
+          if (day.id === savedDay.id) {
+            return savedDay
           }
-        )
+
+          return day
+        })
       } else {
         updatedDays = [
           ...currentDays,
@@ -294,7 +383,10 @@ function Itinerary() {
       )
     })
 
-    // Después de guardar, todos permanecen plegados.
+    /*
+     * El día queda plegado después de crear
+     * o guardar sus cambios.
+     */
     setExpandedDays([])
 
     form.reset()
@@ -329,7 +421,8 @@ function Itinerary() {
       )
 
       setErrorMessage(
-        'No se pudo eliminar el día.'
+        'No se pudo eliminar el día: ' +
+          result.error.message
       )
 
       return
@@ -398,6 +491,11 @@ function Itinerary() {
         <form
           className="day-form"
           onSubmit={saveDay}
+          key={
+            editingDay
+              ? 'edit-day-' + editingDay.id
+              : 'new-day'
+          }
         >
           <div className="day-form-heading">
             <div>
@@ -450,10 +548,7 @@ function Itinerary() {
                 name="travel_date"
                 type="date"
                 defaultValue={
-                  editingDay &&
-                  editingDay.travel_date
-                    ? editingDay.travel_date
-                    : ''
+                  editingDay?.travel_date || ''
                 }
               />
             </label>
@@ -465,10 +560,7 @@ function Itinerary() {
             <select
               name="city"
               defaultValue={
-                editingDay &&
-                editingDay.city
-                  ? editingDay.city
-                  : ''
+                editingDay?.city || ''
               }
             >
               <option value="">
@@ -496,9 +588,7 @@ function Itinerary() {
               name="title"
               type="text"
               defaultValue={
-                editingDay
-                  ? editingDay.title
-                  : ''
+                editingDay?.title || ''
               }
               placeholder="Ej. Kobe y traslado a Hiroshima"
               required
@@ -512,9 +602,7 @@ function Itinerary() {
               name="summary"
               rows="3"
               defaultValue={
-                editingDay
-                  ? editingDay.summary || ''
-                  : ''
+                editingDay?.summary || ''
               }
               placeholder="Resumen de la jornada..."
             />
@@ -578,6 +666,9 @@ function Itinerary() {
 
             return (
               <article
+                id={
+                  'itinerary-day-' + day.id
+                }
                 className={
                   isExpanded
                     ? 'itinerary-day expanded'

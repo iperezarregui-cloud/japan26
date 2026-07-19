@@ -4,6 +4,7 @@ import Auth from './Auth'
 import Itinerary from './Itinerary'
 import Hotels from './Hotels'
 import ActivityFilters from './ActivityFilters'
+import Reservations from './Reservations'
 import { supabase } from './supabase'
 
 const cities = [
@@ -264,6 +265,11 @@ function App() {
 
   const [activeTab, setActiveTab] =
     useState('itinerary')
+
+  const [
+    requestedItineraryDayId,
+    setRequestedItineraryDayId,
+  ] = useState(null)
 
   const [selectedCityId, setSelectedCityId] =
     useState(null)
@@ -556,6 +562,7 @@ function App() {
   function changeTab(tab) {
     setActiveTab(tab)
     setSelectedCityId(null)
+    setRequestedItineraryDayId(null)
     resetCityView()
 
     if (tab === 'cities' && session) {
@@ -564,7 +571,28 @@ function App() {
   }
 
   function openCity(cityId) {
+    setActiveTab('cities')
     setSelectedCityId(cityId)
+    setRequestedItineraryDayId(null)
+
+    setCitySection('hotel')
+    setShowActivityForm(false)
+    setEditingActivity(null)
+    setActivityFilter('all')
+    setSelectedNeighborhood('all')
+    setActivitySearchText('')
+    setActivitiesError('')
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    })
+  }
+
+  function openItineraryDay(dayId) {
+    setActiveTab('itinerary')
+    setSelectedCityId(null)
+    setRequestedItineraryDayId(dayId)
     resetCityView()
   }
 
@@ -648,7 +676,6 @@ function App() {
       setActivitiesError(
         'El nombre es obligatorio.'
       )
-
       return
     }
 
@@ -902,10 +929,40 @@ function App() {
         >
           Ciudades
         </button>
+
+        <button
+          className={
+            activeTab === 'reservations'
+              ? 'tab active'
+              : 'tab'
+          }
+          type="button"
+          onClick={() =>
+            changeTab('reservations')
+          }
+        >
+          Reservas
+        </button>
       </section>
 
       {activeTab === 'itinerary' && (
-        <Itinerary />
+        <Itinerary
+          requestedDayId={
+            requestedItineraryDayId
+          }
+          onRequestedDayOpened={() =>
+            setRequestedItineraryDayId(null)
+          }
+        />
+      )}
+
+      {activeTab === 'reservations' && (
+        <Reservations
+          onOpenCity={openCity}
+          onOpenItineraryDay={
+            openItineraryDay
+          }
+        />
       )}
 
       {activeTab === 'cities' &&

@@ -5021,3 +5021,42 @@ PESTANAS DE CIUDAD: TRES COLUMNAS Y TEXTO CENTRADO
     font-size: 9px;
   }
 }
+
+
+/* =====================================================
+ICONOS DE GOOGLE MAPS Y TIKTOK EN LAS FICHAS
+===================================================== */
+.activity-information > a.activity-icon-link {
+  display: inline-grid;
+  width: 30px;
+  height: 30px;
+  margin-top: 9px;
+  margin-right: 8px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid #e2e4e8;
+  border-radius: 9px;
+  background: #ffffff;
+  color: inherit;
+  font-size: 15px;
+  line-height: 1;
+  text-decoration: none;
+  vertical-align: middle;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.activity-information > a.activity-icon-link:hover {
+  border-color: #ffd4db;
+  background: #fff0f2;
+  color: inherit;
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+.activity-information > a.activity-icon-link span {
+  display: block;
+  line-height: 1;
+}

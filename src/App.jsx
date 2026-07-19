@@ -1584,21 +1584,27 @@ const [
 
                               {activity.link && (
                             <a
+                              className="activity-icon-link"
                               href={activity.link}
                               target="_blank"
                               rel="noreferrer"
+                              aria-label="Abrir en Google Maps"
+                              title="Abrir en Google Maps"
                             >
-                              Abrir en Google Maps
+                              <span aria-hidden="true">🗺️</span>
                             </a>
                           )}
 
                           {activity.tiktok_link && (
                             <a
+                              className="activity-icon-link"
                               href={activity.tiktok_link}
                               target="_blank"
                               rel="noreferrer"
+                              aria-label="Ver vídeo en TikTok"
+                              title="Ver vídeo en TikTok"
                             >
-                              Ver en TikTok
+                              <span aria-hidden="true">🎬</span>
                             </a>
                           )}
 

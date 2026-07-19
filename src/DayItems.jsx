@@ -281,7 +281,14 @@ function DayItems({ day }) {
   }
 
   async function toggleBookingStatus(item, field) {
-    if (updatingItemId) {
+    if (updatingItemId !== null) {
+      return
+    }
+
+    if (
+      field !== 'reserved' &&
+      field !== 'paid'
+    ) {
       return
     }
 
@@ -360,6 +367,13 @@ function DayItems({ day }) {
           currentItem.id !== item.id
       )
     )
+
+    if (
+      editingItem &&
+      editingItem.id === item.id
+    ) {
+      closeItemForm()
+    }
   }
 
   function openItemLink(link) {

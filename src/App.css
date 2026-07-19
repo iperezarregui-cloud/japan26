@@ -3538,3 +3538,27 @@ button {
     grid-template-columns: 1fr 1fr;
   }
 }
+/* Orden alfabético automático de barrios */
+
+.neighborhood-row-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.neighborhood-row-actions button {
+  min-width: 62px;
+}
+
+@media (max-width: 520px) {
+  .neighborhood-row-actions {
+    display: grid;
+    width: 100%;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .neighborhood-row-actions button {
+    width: 100%;
+    min-height: 36px;
+  }
+}

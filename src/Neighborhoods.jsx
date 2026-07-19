@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabase'
 
 const initialNeighborhoods = [
@@ -15,6 +15,36 @@ const initialNeighborhoods = [
   'Otros',
 ]
 
+function sortNeighborhoods(neighborhoods) {
+  return [...neighborhoods].sort(
+    (first, second) => {
+      const firstIsOther =
+        first.name.trim().toLowerCase() ===
+        'otros'
+
+      const secondIsOther =
+        second.name.trim().toLowerCase() ===
+        'otros'
+
+      if (firstIsOther && !secondIsOther) {
+        return 1
+      }
+
+      if (!firstIsOther && secondIsOther) {
+        return -1
+      }
+
+      return first.name.localeCompare(
+        second.name,
+        'es',
+        {
+          sensitivity: 'base',
+        }
+      )
+    }
+  )
+}
+
 function Neighborhoods({
   cityId,
   selectedNeighborhood,
@@ -30,11 +60,17 @@ function Neighborhoods({
   const [showManager, setShowManager] =
     useState(false)
 
-  const [editingNeighborhood, setEditingNeighborhood] =
-    useState(null)
+  const [
+    editingNeighborhood,
+    setEditingNeighborhood,
+  ] = useState(null)
 
   const [errorMessage, setErrorMessage] =
     useState('')
+
+  const sortedNeighborhoods = useMemo(() => {
+    return sortNeighborhoods(neighborhoods)
+  }, [neighborhoods])
 
   useEffect(() => {
     if (cityId === 'tokyo') {
@@ -50,12 +86,6 @@ function Neighborhoods({
       .from('neighborhoods')
       .select('*')
       .eq('city', 'tokyo')
-      .order('position', {
-        ascending: true,
-      })
-      .order('name', {
-        ascending: true,
-      })
 
     if (result.error) {
       console.error(
@@ -71,25 +101,30 @@ function Neighborhoods({
       return
     }
 
-    let loadedNeighborhoods = result.data || []
+    let loadedNeighborhoods =
+      result.data || []
 
     if (loadedNeighborhoods.length === 0) {
       loadedNeighborhoods =
         await createInitialNeighborhoods()
     }
 
-    updateNeighborhoods(loadedNeighborhoods)
+    updateNeighborhoods(
+      loadedNeighborhoods
+    )
+
     setLoading(false)
   }
 
   async function createInitialNeighborhoods() {
-    const initialRows = initialNeighborhoods.map(
-      (name, index) => ({
-        city: 'tokyo',
-        name,
-        position: index,
-      })
-    )
+    const initialRows =
+      initialNeighborhoods.map(
+        (name, index) => ({
+          city: 'tokyo',
+          name,
+          position: index,
+        })
+      )
 
     const result = await supabase
       .from('neighborhoods')
@@ -110,26 +145,34 @@ function Neighborhoods({
       return []
     }
 
-    return (result.data || []).sort(
-      (first, second) =>
-        first.position - second.position
-    )
+    return result.data || []
   }
 
-  function updateNeighborhoods(nextNeighborhoods) {
-    setNeighborhoods(nextNeighborhoods)
+  function updateNeighborhoods(
+    nextNeighborhoods
+  ) {
+    const orderedNeighborhoods =
+      sortNeighborhoods(nextNeighborhoods)
+
+    setNeighborhoods(
+      orderedNeighborhoods
+    )
 
     if (onNeighborhoodsChange) {
       onNeighborhoodsChange(
-        nextNeighborhoods.map(
-          (neighborhood) => neighborhood.name
+        orderedNeighborhoods.map(
+          (neighborhood) =>
+            neighborhood.name
         )
       )
     }
   }
 
   function toggleManager() {
-    setShowManager((currentValue) => !currentValue)
+    setShowManager(
+      (currentValue) => !currentValue
+    )
+
     setEditingNeighborhood(null)
     setErrorMessage('')
   }
@@ -152,19 +195,24 @@ function Neighborhoods({
       setErrorMessage(
         'Escribe el nombre del barrio.'
       )
+
       return
     }
 
-    const duplicated = neighborhoods.some(
-      (neighborhood) =>
-        neighborhood.name.toLowerCase() ===
-        name.toLowerCase()
-    )
+    const duplicated =
+      neighborhoods.some(
+        (neighborhood) =>
+          neighborhood.name
+            .trim()
+            .toLowerCase() ===
+          name.toLowerCase()
+      )
 
     if (duplicated) {
       setErrorMessage(
         'Ya existe un barrio con ese nombre.'
       )
+
       return
     }
 
@@ -216,7 +264,10 @@ function Neighborhoods({
   async function renameNeighborhood(event) {
     event.preventDefault()
 
-    if (!editingNeighborhood || saving) {
+    if (
+      !editingNeighborhood ||
+      saving
+    ) {
       return
     }
 
@@ -232,37 +283,47 @@ function Neighborhoods({
       setErrorMessage(
         'El nombre del barrio es obligatorio.'
       )
+
       return
     }
 
-    const duplicated = neighborhoods.some(
-      (neighborhood) =>
-        neighborhood.id !==
-          editingNeighborhood.id &&
-        neighborhood.name.toLowerCase() ===
-          newName.toLowerCase()
-    )
+    const duplicated =
+      neighborhoods.some(
+        (neighborhood) =>
+          neighborhood.id !==
+            editingNeighborhood.id &&
+          neighborhood.name
+            .trim()
+            .toLowerCase() ===
+            newName.toLowerCase()
+      )
 
     if (duplicated) {
       setErrorMessage(
         'Ya existe un barrio con ese nombre.'
       )
+
       return
     }
 
-    const oldName = editingNeighborhood.name
+    const oldName =
+      editingNeighborhood.name
 
     setSaving(true)
     setErrorMessage('')
 
-    const neighborhoodResult = await supabase
-      .from('neighborhoods')
-      .update({
-        name: newName,
-      })
-      .eq('id', editingNeighborhood.id)
-      .select()
-      .single()
+    const neighborhoodResult =
+      await supabase
+        .from('neighborhoods')
+        .update({
+          name: newName,
+        })
+        .eq(
+          'id',
+          editingNeighborhood.id
+        )
+        .select()
+        .single()
 
     if (neighborhoodResult.error) {
       console.error(
@@ -279,13 +340,14 @@ function Neighborhoods({
       return
     }
 
-    const activitiesResult = await supabase
-      .from('activities')
-      .update({
-        neighborhood: newName,
-      })
-      .eq('city', 'tokyo')
-      .eq('neighborhood', oldName)
+    const activitiesResult =
+      await supabase
+        .from('activities')
+        .update({
+          neighborhood: newName,
+        })
+        .eq('city', 'tokyo')
+        .eq('neighborhood', oldName)
 
     if (activitiesResult.error) {
       console.error(
@@ -298,23 +360,27 @@ function Neighborhoods({
       )
     }
 
-    const nextNeighborhoods = neighborhoods.map(
-      (neighborhood) => {
-        if (
-          neighborhood.id ===
-          editingNeighborhood.id
-        ) {
-          return neighborhoodResult.data
-        }
+    const nextNeighborhoods =
+      neighborhoods.map(
+        (neighborhood) => {
+          if (
+            neighborhood.id ===
+            editingNeighborhood.id
+          ) {
+            return neighborhoodResult.data
+          }
 
-        return neighborhood
-      }
+          return neighborhood
+        }
+      )
+
+    updateNeighborhoods(
+      nextNeighborhoods
     )
 
-    updateNeighborhoods(nextNeighborhoods)
-
     if (
-      selectedNeighborhood === oldName &&
+      selectedNeighborhood ===
+        oldName &&
       onSelectNeighborhood
     ) {
       onSelectNeighborhood(newName)
@@ -324,12 +390,15 @@ function Neighborhoods({
     setSaving(false)
   }
 
-  async function deleteNeighborhood(neighborhood) {
-    const shouldDelete = window.confirm(
-      '¿Quieres eliminar el barrio “' +
-        neighborhood.name +
-        '”? Las actividades asociadas pasarán a Sin barrio.'
-    )
+  async function deleteNeighborhood(
+    neighborhood
+  ) {
+    const shouldDelete =
+      window.confirm(
+        '¿Quieres eliminar el barrio “' +
+          neighborhood.name +
+          '”? Las actividades asociadas pasarán a Sin barrio.'
+      )
 
     if (!shouldDelete) {
       return
@@ -338,13 +407,17 @@ function Neighborhoods({
     setSaving(true)
     setErrorMessage('')
 
-    const activitiesResult = await supabase
-      .from('activities')
-      .update({
-        neighborhood: null,
-      })
-      .eq('city', 'tokyo')
-      .eq('neighborhood', neighborhood.name)
+    const activitiesResult =
+      await supabase
+        .from('activities')
+        .update({
+          neighborhood: null,
+        })
+        .eq('city', 'tokyo')
+        .eq(
+          'neighborhood',
+          neighborhood.name
+        )
 
     if (activitiesResult.error) {
       console.error(
@@ -383,7 +456,9 @@ function Neighborhoods({
             neighborhood.id
         )
 
-      updateNeighborhoods(nextNeighborhoods)
+      updateNeighborhoods(
+        nextNeighborhoods
+      )
 
       if (
         selectedNeighborhood ===
@@ -392,92 +467,13 @@ function Neighborhoods({
       ) {
         onSelectNeighborhood('all')
       }
-    }
 
-    setSaving(false)
-  }
-
-  async function moveNeighborhood(
-    neighborhood,
-    direction
-  ) {
-    if (saving) {
-      return
-    }
-
-    const currentIndex = neighborhoods.findIndex(
-      (currentNeighborhood) =>
-        currentNeighborhood.id ===
+      if (
+        editingNeighborhood?.id ===
         neighborhood.id
-    )
-
-    const targetIndex =
-      direction === 'up'
-        ? currentIndex - 1
-        : currentIndex + 1
-
-    if (
-      currentIndex < 0 ||
-      targetIndex < 0 ||
-      targetIndex >= neighborhoods.length
-    ) {
-      return
-    }
-
-    const nextNeighborhoods = [
-      ...neighborhoods,
-    ]
-
-    const targetNeighborhood =
-      nextNeighborhoods[targetIndex]
-
-    nextNeighborhoods[currentIndex] =
-      targetNeighborhood
-
-    nextNeighborhoods[targetIndex] =
-      neighborhood
-
-    const reorderedNeighborhoods =
-      nextNeighborhoods.map(
-        (currentNeighborhood, index) => ({
-          ...currentNeighborhood,
-          position: index,
-        })
-      )
-
-    updateNeighborhoods(reorderedNeighborhoods)
-    setSaving(true)
-    setErrorMessage('')
-
-    const firstResult = await supabase
-      .from('neighborhoods')
-      .update({
-        position: targetIndex,
-      })
-      .eq('id', neighborhood.id)
-
-    const secondResult = await supabase
-      .from('neighborhoods')
-      .update({
-        position: currentIndex,
-      })
-      .eq('id', targetNeighborhood.id)
-
-    if (
-      firstResult.error ||
-      secondResult.error
-    ) {
-      console.error(
-        'Error al reordenar barrios:',
-        firstResult.error ||
-          secondResult.error
-      )
-
-      setErrorMessage(
-        'No se pudo guardar el nuevo orden.'
-      )
-
-      await loadNeighborhoods()
+      ) {
+        setEditingNeighborhood(null)
+      }
     }
 
     setSaving(false)
@@ -505,7 +501,8 @@ function Neighborhoods({
           </p>
 
           <p className="neighborhoods-help">
-            Filtra la lista por zona de Tokio.
+            Filtra la lista por zona de
+            Tokio.
           </p>
         </div>
 
@@ -537,7 +534,8 @@ function Neighborhoods({
 
         <button
           className={
-            selectedNeighborhood === 'none'
+            selectedNeighborhood ===
+            'none'
               ? 'selected'
               : ''
           }
@@ -549,25 +547,27 @@ function Neighborhoods({
           Sin barrio
         </button>
 
-        {neighborhoods.map((neighborhood) => (
-          <button
-            className={
-              selectedNeighborhood ===
-              neighborhood.name
-                ? 'selected'
-                : ''
-            }
-            type="button"
-            key={neighborhood.id}
-            onClick={() =>
-              onSelectNeighborhood(
+        {sortedNeighborhoods.map(
+          (neighborhood) => (
+            <button
+              className={
+                selectedNeighborhood ===
                 neighborhood.name
-              )
-            }
-          >
-            {neighborhood.name}
-          </button>
-        ))}
+                  ? 'selected'
+                  : ''
+              }
+              type="button"
+              key={neighborhood.id}
+              onClick={() =>
+                onSelectNeighborhood(
+                  neighborhood.name
+                )
+              }
+            >
+              {neighborhood.name}
+            </button>
+          )
+        )}
       </div>
 
       {errorMessage && (
@@ -609,8 +609,8 @@ function Neighborhoods({
           </form>
 
           <div className="neighborhoods-list">
-            {neighborhoods.map(
-              (neighborhood, index) => (
+            {sortedNeighborhoods.map(
+              (neighborhood) => (
                 <article
                   className="neighborhood-row"
                   key={neighborhood.id}
@@ -619,7 +619,9 @@ function Neighborhoods({
                   neighborhood.id ? (
                     <form
                       className="neighborhood-edit-form"
-                      onSubmit={renameNeighborhood}
+                      onSubmit={
+                        renameNeighborhood
+                      }
                     >
                       <input
                         name="name"
@@ -639,7 +641,10 @@ function Neighborhoods({
 
                       <button
                         type="button"
-                        onClick={cancelEditing}
+                        disabled={saving}
+                        onClick={
+                          cancelEditing
+                        }
                       >
                         Cancelar
                       </button>
@@ -653,47 +658,7 @@ function Neighborhoods({
                       <div className="neighborhood-row-actions">
                         <button
                           type="button"
-                          disabled={
-                            saving || index === 0
-                          }
-                          onClick={() =>
-                            moveNeighborhood(
-                              neighborhood,
-                              'up'
-                            )
-                          }
-                          aria-label={
-                            'Subir ' +
-                            neighborhood.name
-                          }
-                        >
-                          ↑
-                        </button>
-
-                        <button
-                          type="button"
-                          disabled={
-                            saving ||
-                            index ===
-                              neighborhoods.length -
-                                1
-                          }
-                          onClick={() =>
-                            moveNeighborhood(
-                              neighborhood,
-                              'down'
-                            )
-                          }
-                          aria-label={
-                            'Bajar ' +
-                            neighborhood.name
-                          }
-                        >
-                          ↓
-                        </button>
-
-                        <button
-                          type="button"
+                          disabled={saving}
                           onClick={() =>
                             startEditing(
                               neighborhood
@@ -706,6 +671,7 @@ function Neighborhoods({
                         <button
                           className="neighborhood-delete-button"
                           type="button"
+                          disabled={saving}
                           onClick={() =>
                             deleteNeighborhood(
                               neighborhood

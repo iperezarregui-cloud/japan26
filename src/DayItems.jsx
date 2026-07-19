@@ -175,10 +175,13 @@ function DayItems({ day }) {
   const [updatingItemId, setUpdatingItemId] =
     useState(null)
 
-  const [showItemForm, setShowItemForm] =
+  const [showNewItemForm, setShowNewItemForm] =
     useState(false)
 
   const [editingItem, setEditingItem] =
+    useState(null)
+
+  const [informationItem, setInformationItem] =
     useState(null)
 
   const [entryMode, setEntryMode] =
@@ -188,12 +191,6 @@ function DayItems({ day }) {
     selectedActivityId,
     setSelectedActivityId,
   ] = useState('')
-
-  const [activityDetails, setActivityDetails] =
-    useState(null)
-
-  const [movingItem, setMovingItem] =
-    useState(null)
 
   const [targetDayId, setTargetDayId] =
     useState('')
@@ -430,12 +427,36 @@ function DayItems({ day }) {
     setEditingItem(null)
     setEntryMode('manual')
     setSelectedActivityId('')
-    setShowItemForm(true)
+    setShowNewItemForm(true)
     setErrorMessage('')
   }
 
-  function openEditItemForm(item) {
+  function closeNewItemForm() {
+    setShowNewItemForm(false)
+    setEntryMode('manual')
+    setSelectedActivityId('')
+    setErrorMessage('')
+  }
+
+  function changeEntryMode(mode) {
+    setEntryMode(mode)
+    setSelectedActivityId('')
+    setErrorMessage('')
+  }
+
+  function openInformation(item) {
+    setInformationItem(item)
+    setErrorMessage('')
+  }
+
+  function closeInformation() {
+    setInformationItem(null)
+    setErrorMessage('')
+  }
+
+  function openEditor(item) {
     setEditingItem(item)
+    setTargetDayId('')
     setErrorMessage('')
 
     if (item.activity_id) {
@@ -447,33 +468,14 @@ function DayItems({ day }) {
       setEntryMode('manual')
       setSelectedActivityId('')
     }
-
-    setShowItemForm(true)
   }
 
-  function closeItemForm() {
+  function closeEditor() {
     setEditingItem(null)
+    setTargetDayId('')
+    setSelectedActivityId('')
     setEntryMode('manual')
-    setSelectedActivityId('')
-    setShowItemForm(false)
     setErrorMessage('')
-  }
-
-  function changeEntryMode(mode) {
-    setEntryMode(mode)
-    setEditingItem(null)
-    setSelectedActivityId('')
-    setErrorMessage('')
-  }
-
-  function openActivityDetails(activity) {
-    if (activity) {
-      setActivityDetails(activity)
-    }
-  }
-
-  function closeActivityDetails() {
-    setActivityDetails(null)
   }
 
   function openExternalLink(link) {
@@ -486,18 +488,6 @@ function DayItems({ day }) {
       '_blank',
       'noopener,noreferrer'
     )
-  }
-
-  function openMoveForm(item) {
-    setMovingItem(item)
-    setTargetDayId('')
-    setErrorMessage('')
-  }
-
-  function closeMoveForm() {
-    setMovingItem(null)
-    setTargetDayId('')
-    setErrorMessage('')
   }
 
   async function normalizePositions(
@@ -564,18 +554,17 @@ function DayItems({ day }) {
         )
       })
 
-    const updates = dayItems.map(
-      (item, index) =>
-        supabase
-          .from('itinerary_items')
-          .update({
-            position: index,
-          })
-          .eq('id', item.id)
-    )
-
     const updateResults =
-      await Promise.all(updates)
+      await Promise.all(
+        dayItems.map((item, index) =>
+          supabase
+            .from('itinerary_items')
+            .update({
+              position: index,
+            })
+            .eq('id', item.id)
+        )
+      )
 
     const failedUpdate =
       updateResults.find(
@@ -595,7 +584,7 @@ function DayItems({ day }) {
     return true
   }
 
-  async function saveItem(event) {
+  async function saveNewItem(event) {
     event.preventDefault()
 
     if (savingItem) {
@@ -663,11 +652,148 @@ function DayItems({ day }) {
         link: activity.link || '',
         reserved: false,
         paid: false,
-        position: editingItem
-          ? Number(
-              editingItem.position || 0
-            )
-          : items.length,
+        position: items.length,
+      }
+    } else {
+      const itemType = String(
+        formData.get('item_type') ||
+          'manual'
+      )
+
+      const title = String(
+        formData.get('title') || ''
+      ).trim()
+
+      if (!title) {
+        setErrorMessage(
+          'El título es obligatorio.'
+        )
+
+        return
+      }
+
+      itemInformation = {
+        day_id: day.id,
+        activity_id: null,
+        item_type: itemType,
+        start_time: startTime,
+        end_time: endTime,
+        title,
+        description: String(
+          formData.get('description') ||
+            ''
+        ).trim(),
+        link: String(
+          formData.get('link') || ''
+        ).trim(),
+        position: items.length,
+        reserved: false,
+        paid: false,
+      }
+    }
+
+    setSavingItem(true)
+    setErrorMessage('')
+
+    const result = await supabase
+      .from('itinerary_items')
+      .insert(itemInformation)
+      .select()
+      .single()
+
+    if (result.error) {
+      console.error(
+        'Error al guardar la línea:',
+        result.error
+      )
+
+      setErrorMessage(
+        'No se pudo guardar la línea: ' +
+          result.error.message
+      )
+    } else {
+      setItems((currentItems) => [
+        ...currentItems,
+        result.data,
+      ])
+
+      form.reset()
+      closeNewItemForm()
+    }
+
+    setSavingItem(false)
+  }
+
+  async function saveEditedItem(event) {
+    event.preventDefault()
+
+    if (
+      !editingItem ||
+      savingItem
+    ) {
+      return
+    }
+
+    const form = event.currentTarget
+    const formData = new FormData(form)
+
+    const startTimeValue = String(
+      formData.get('start_time') || ''
+    )
+
+    const endTimeValue = String(
+      formData.get('end_time') || ''
+    )
+
+    const startTime =
+      startTimeValue || null
+
+    const endTime =
+      endTimeValue || null
+
+    if (
+      startTime &&
+      endTime &&
+      endTime < startTime
+    ) {
+      setErrorMessage(
+        'La hora de fin no puede ser anterior a la hora de inicio.'
+      )
+
+      return
+    }
+
+    let itemInformation
+
+    if (entryMode === 'activity') {
+      const activityId = Number(
+        formData.get('activity_id')
+      )
+
+      const activity =
+        getLinkedActivity(activityId)
+
+      if (!activity) {
+        setErrorMessage(
+          'Selecciona una actividad.'
+        )
+
+        return
+      }
+
+      itemInformation = {
+        activity_id: activity.id,
+        item_type: 'activity',
+        start_time: startTime,
+        end_time: endTime,
+        title: activity.name,
+        description: String(
+          formData.get('activity_note') ||
+            ''
+        ).trim(),
+        link: activity.link || '',
+        reserved: false,
+        paid: false,
       }
     } else {
       const itemType = String(
@@ -691,7 +817,6 @@ function DayItems({ day }) {
         getManualType(itemType)
 
       itemInformation = {
-        day_id: day.id,
         activity_id: null,
         item_type: itemType,
         start_time: startTime,
@@ -704,11 +829,6 @@ function DayItems({ day }) {
         link: String(
           formData.get('link') || ''
         ).trim(),
-        position: editingItem
-          ? Number(
-              editingItem.position || 0
-            )
-          : items.length,
       }
 
       if (!selectedType.supportsBooking) {
@@ -720,51 +840,33 @@ function DayItems({ day }) {
     setSavingItem(true)
     setErrorMessage('')
 
-    let result
-
-    if (editingItem) {
-      result = await supabase
-        .from('itinerary_items')
-        .update(itemInformation)
-        .eq('id', editingItem.id)
-        .select()
-        .single()
-    } else {
-      result = await supabase
-        .from('itinerary_items')
-        .insert(itemInformation)
-        .select()
-        .single()
-    }
+    const result = await supabase
+      .from('itinerary_items')
+      .update(itemInformation)
+      .eq('id', editingItem.id)
+      .select()
+      .single()
 
     if (result.error) {
       console.error(
-        'Error al guardar la línea:',
+        'Error al editar la línea:',
         result.error
       )
 
       setErrorMessage(
-        'No se pudo guardar la línea: ' +
+        'No se pudieron guardar los cambios: ' +
           result.error.message
       )
     } else {
-      if (editingItem) {
-        setItems((currentItems) =>
-          currentItems.map((item) =>
-            item.id === editingItem.id
-              ? result.data
-              : item
-          )
+      setItems((currentItems) =>
+        currentItems.map((item) =>
+          item.id === editingItem.id
+            ? result.data
+            : item
         )
-      } else {
-        setItems((currentItems) => [
-          ...currentItems,
-          result.data,
-        ])
-      }
+      )
 
-      form.reset()
-      closeItemForm()
+      closeEditor()
     }
 
     setSavingItem(false)
@@ -774,21 +876,11 @@ function DayItems({ day }) {
     item,
     field
   ) {
-    if (updatingItemId !== null) {
-      return
-    }
-
     if (
-      field !== 'reserved' &&
-      field !== 'paid'
+      updatingItemId !== null ||
+      (field !== 'reserved' &&
+        field !== 'paid')
     ) {
-      return
-    }
-
-    const manualType =
-      getManualType(item.item_type)
-
-    if (!manualType.supportsBooking) {
       return
     }
 
@@ -832,16 +924,16 @@ function DayItems({ day }) {
             : currentItem
         )
       )
+
+      setInformationItem(result.data)
     }
 
     setUpdatingItemId(null)
   }
 
-  async function moveItem(event) {
-    event.preventDefault()
-
+  async function moveEditedItem() {
     if (
-      !movingItem ||
+      !editingItem ||
       !targetDayId ||
       updatingItemId !== null
     ) {
@@ -851,7 +943,7 @@ function DayItems({ day }) {
     const numericTargetDayId =
       Number(targetDayId)
 
-    const targetDay = itineraryDays.find(
+    const targetDay = targetDays.find(
       (itineraryDay) =>
         itineraryDay.id ===
         numericTargetDayId
@@ -865,7 +957,7 @@ function DayItems({ day }) {
       return
     }
 
-    setUpdatingItemId(movingItem.id)
+    setUpdatingItemId(editingItem.id)
     setErrorMessage('')
 
     const targetItemsResult =
@@ -900,7 +992,7 @@ function DayItems({ day }) {
         day_id: numericTargetDayId,
         position: newPosition,
       })
-      .eq('id', movingItem.id)
+      .eq('id', editingItem.id)
       .select()
       .single()
 
@@ -922,17 +1014,17 @@ function DayItems({ day }) {
     setItems((currentItems) =>
       currentItems.filter(
         (item) =>
-          item.id !== movingItem.id
+          item.id !== editingItem.id
       )
     )
 
     await normalizePositions(
       day.id,
-      movingItem.id
+      editingItem.id
     )
 
-    closeMoveForm()
     setUpdatingItemId(null)
+    closeEditor()
   }
 
   async function moveUntimedItem(
@@ -1038,16 +1130,26 @@ function DayItems({ day }) {
       })
     )
 
+    setEditingItem(currentResult.data)
     setUpdatingItemId(null)
   }
 
-  async function deleteItem(item) {
+  async function deleteEditedItem() {
+    if (
+      !editingItem ||
+      updatingItemId !== null
+    ) {
+      return
+    }
+
     const linkedActivity =
-      getLinkedActivity(item.activity_id)
+      getLinkedActivity(
+        editingItem.activity_id
+      )
 
     const title =
       linkedActivity?.name ||
-      item.title ||
+      editingItem.title ||
       'esta línea'
 
     const shouldDelete = window.confirm(
@@ -1060,12 +1162,13 @@ function DayItems({ day }) {
       return
     }
 
+    setUpdatingItemId(editingItem.id)
     setErrorMessage('')
 
     const result = await supabase
       .from('itinerary_items')
       .delete()
-      .eq('id', item.id)
+      .eq('id', editingItem.id)
 
     if (result.error) {
       console.error(
@@ -1077,29 +1180,88 @@ function DayItems({ day }) {
         'No se pudo eliminar la línea.'
       )
 
+      setUpdatingItemId(null)
       return
     }
 
     setItems((currentItems) =>
       currentItems.filter(
         (currentItem) =>
-          currentItem.id !== item.id
+          currentItem.id !== editingItem.id
       )
     )
 
     await normalizePositions(
       day.id,
-      item.id
+      editingItem.id
     )
 
-    if (editingItem?.id === item.id) {
-      closeItemForm()
-    }
-
-    if (movingItem?.id === item.id) {
-      closeMoveForm()
-    }
+    setUpdatingItemId(null)
+    closeEditor()
   }
+
+  const informationActivity =
+    informationItem
+      ? getLinkedActivity(
+          informationItem.activity_id
+        )
+      : null
+
+  const informationIsActivity =
+    Boolean(informationActivity)
+
+  const informationManualType =
+    informationItem
+      ? getManualType(
+          informationItem.item_type
+        )
+      : null
+
+  const informationActivityType =
+    informationIsActivity
+      ? getActivityType(
+          informationActivity.item_type
+        )
+      : null
+
+  const informationTitle =
+    informationIsActivity
+      ? informationActivity.name
+      : informationItem?.title
+
+  const informationIcon =
+    informationIsActivity
+      ? informationActivityType.icon
+      : informationManualType?.icon
+
+  const informationSupportsBooking =
+    Boolean(
+      informationItem &&
+        !informationIsActivity &&
+        informationManualType
+          ?.supportsBooking
+    )
+
+  const informationLink =
+    informationIsActivity
+      ? informationActivity.link
+      : informationItem?.link
+
+  const editingUntimedIndex =
+    editingItem && !editingItem.start_time
+      ? itemsWithoutTime.findIndex(
+          (item) =>
+            item.id === editingItem.id
+        )
+      : -1
+
+  const canMoveEditingUp =
+    editingUntimedIndex > 0
+
+  const canMoveEditingDown =
+    editingUntimedIndex >= 0 &&
+    editingUntimedIndex <
+      itemsWithoutTime.length - 1
 
   if (loadingItems) {
     return (
@@ -1111,7 +1273,7 @@ function DayItems({ day }) {
   }
 
   return (
-    <div className="manual-day-items">
+    <div className="manual-day-items compact-day-items">
       {errorMessage && (
         <div className="auth-message error manual-items-error">
           <strong>
@@ -1123,7 +1285,7 @@ function DayItems({ day }) {
       )}
 
       {sortedItems.length === 0 &&
-        !showItemForm && (
+        !showNewItemForm && (
           <div className="itinerary-no-items">
             <span>🕒</span>
 
@@ -1141,7 +1303,7 @@ function DayItems({ day }) {
         )}
 
       {sortedItems.length > 0 && (
-        <div className="manual-timeline">
+        <div className="compact-timeline">
           {sortedItems.map((item) => {
             const linkedActivity =
               getLinkedActivity(
@@ -1169,39 +1331,17 @@ function DayItems({ day }) {
               ? activityType.icon
               : manualType.icon
 
-            const mapsLink = isActivity
-              ? linkedActivity.link
-              : item.link
-
-            const supportsBooking =
-              !isActivity &&
-              manualType.supportsBooking
-
-            const isUpdating =
-              updatingItemId === item.id
-
-            const untimedIndex =
-              itemsWithoutTime.findIndex(
-                (untimedItem) =>
-                  untimedItem.id === item.id
-              )
-
-            const canMoveUp =
-              !item.start_time &&
-              untimedIndex > 0
-
-            const canMoveDown =
-              !item.start_time &&
-              untimedIndex >= 0 &&
-              untimedIndex <
-                itemsWithoutTime.length - 1
+            const itemTypeLabel =
+              isActivity
+                ? activityType.label
+                : manualType.label
 
             return (
               <article
-                className="manual-timeline-item"
+                className="compact-timeline-row"
                 key={item.id}
               >
-                <div className="manual-timeline-time">
+                <div className="compact-timeline-time">
                   <strong>
                     {formatTime(
                       item.start_time
@@ -1210,7 +1350,6 @@ function DayItems({ day }) {
 
                   {item.end_time && (
                     <small>
-                      hasta{' '}
                       {formatTime(
                         item.end_time
                       )}
@@ -1218,276 +1357,45 @@ function DayItems({ day }) {
                   )}
                 </div>
 
-                <div className="manual-timeline-marker">
-                  <span>{icon}</span>
+                <span className="compact-timeline-icon">
+                  {icon}
+                </span>
+
+                <div className="compact-timeline-main">
+                  <span>
+                    {itemTypeLabel}
+                  </span>
+
+                  <strong>{title}</strong>
                 </div>
 
-                <div className="manual-timeline-card">
-                  <div className="manual-card-heading">
-                    <div
-                      className={
-                        isActivity
-                          ? 'itinerary-activity-heading'
-                          : ''
-                      }
-                    >
-                      <span className="manual-item-type">
-                        {isActivity
-                          ? activityType.label
-                          : manualType.label}
-                      </span>
+                <div className="compact-timeline-actions">
+                  <button
+                    className="compact-info-button"
+                    type="button"
+                    onClick={() =>
+                      openInformation(item)
+                    }
+                    aria-label={
+                      'Ver información de ' +
+                      title
+                    }
+                  >
+                    i
+                  </button>
 
-                      <h4>{title}</h4>
-                    </div>
-
-                    <button
-                      className="manual-edit-button"
-                      type="button"
-                      onClick={() =>
-                        openEditItemForm(item)
-                      }
-                    >
-                      Editar
-                    </button>
-                  </div>
-
-                  {item.description && (
-                    <p>{item.description}</p>
-                  )}
-
-                  {isActivity && (
-                    <div className="itinerary-activity-actions">
-                      <button
-                        className="activity-details-button"
-                        type="button"
-                        onClick={() =>
-                          openActivityDetails(
-                            linkedActivity
-                          )
-                        }
-                      >
-                        Ver ficha
-                      </button>
-
-                      {mapsLink && (
-                        <button
-                          className="activity-maps-button"
-                          type="button"
-                          onClick={() =>
-                            openExternalLink(
-                              mapsLink
-                            )
-                          }
-                        >
-                          Google Maps
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {supportsBooking && (
-                    <div className="booking-statuses">
-                      <button
-                        className={
-                          item.reserved
-                            ? 'booking-status selected'
-                            : 'booking-status'
-                        }
-                        type="button"
-                        disabled={isUpdating}
-                        onClick={() =>
-                          toggleBookingStatus(
-                            item,
-                            'reserved'
-                          )
-                        }
-                      >
-                        {item.reserved
-                          ? '✓ Reservado'
-                          : '○ Pendiente de reservar'}
-                      </button>
-
-                      <button
-                        className={
-                          item.paid
-                            ? 'booking-status paid selected'
-                            : 'booking-status paid'
-                        }
-                        type="button"
-                        disabled={isUpdating}
-                        onClick={() =>
-                          toggleBookingStatus(
-                            item,
-                            'paid'
-                          )
-                        }
-                      >
-                        {item.paid
-                          ? '✓ Pagado'
-                          : '○ Pendiente de pago'}
-                      </button>
-                    </div>
-                  )}
-
-                  {!isActivity && item.link && (
-                    <button
-                      className="manual-link-button"
-                      type="button"
-                      onClick={() =>
-                        openExternalLink(
-                          item.link
-                        )
-                      }
-                    >
-                      Abrir enlace
-                    </button>
-                  )}
-
-                  {!item.start_time && (
-                    <div className="untimed-order-actions">
-                      <span>
-                        Orden sin hora
-                      </span>
-
-                      <button
-                        type="button"
-                        disabled={
-                          !canMoveUp ||
-                          isUpdating
-                        }
-                        onClick={() =>
-                          moveUntimedItem(
-                            item,
-                            'up'
-                          )
-                        }
-                      >
-                        ↑ Subir
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={
-                          !canMoveDown ||
-                          isUpdating
-                        }
-                        onClick={() =>
-                          moveUntimedItem(
-                            item,
-                            'down'
-                          )
-                        }
-                      >
-                        ↓ Bajar
-                      </button>
-                    </div>
-                  )}
-
-                  {movingItem?.id ===
-                  item.id ? (
-                    <form
-                      className="move-item-form"
-                      onSubmit={moveItem}
-                    >
-                      <label>
-                        Mover a otro día
-
-                        <select
-                          value={targetDayId}
-                          onChange={(event) =>
-                            setTargetDayId(
-                              event.target.value
-                            )
-                          }
-                          required
-                        >
-                          <option value="">
-                            Seleccionar día
-                          </option>
-
-                          {targetDays.map(
-                            (targetDay) => {
-                              const city =
-                                getCity(
-                                  targetDay.city
-                                )
-
-                              return (
-                                <option
-                                  key={
-                                    targetDay.id
-                                  }
-                                  value={
-                                    targetDay.id
-                                  }
-                                >
-                                  Día{' '}
-                                  {
-                                    targetDay.day_number
-                                  }
-                                  {' · '}
-                                  {city.emoji}{' '}
-                                  {city.label}
-                                  {' · '}
-                                  {
-                                    targetDay.title
-                                  }
-                                </option>
-                              )
-                            }
-                          )}
-                        </select>
-                      </label>
-
-                      <div className="move-item-form-actions">
-                        <button
-                          className="move-item-save-button"
-                          type="submit"
-                          disabled={
-                            !targetDayId ||
-                            isUpdating
-                          }
-                        >
-                          {isUpdating
-                            ? 'Moviendo...'
-                            : 'Mover'}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={closeMoveForm}
-                          disabled={isUpdating}
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    <div className="manual-secondary-actions">
-                      <button
-                        className="move-item-button"
-                        type="button"
-                        onClick={() =>
-                          openMoveForm(item)
-                        }
-                        disabled={
-                          targetDays.length === 0
-                        }
-                      >
-                        Mover a otro día
-                      </button>
-
-                      <button
-                        className="manual-delete-button"
-                        type="button"
-                        onClick={() =>
-                          deleteItem(item)
-                        }
-                      >
-                        Eliminar del día
-                      </button>
-                    </div>
-                  )}
+                  <button
+                    className="compact-edit-button"
+                    type="button"
+                    onClick={() =>
+                      openEditor(item)
+                    }
+                    aria-label={
+                      'Editar ' + title
+                    }
+                  >
+                    ✎
+                  </button>
                 </div>
               </article>
             )
@@ -1495,73 +1403,60 @@ function DayItems({ day }) {
         </div>
       )}
 
-      {showItemForm && (
+      {showNewItemForm && (
         <form
           className="manual-item-form"
-          onSubmit={saveItem}
-          key={
-            editingItem
-              ? 'edit-' + editingItem.id
-              : 'new-item'
-          }
+          onSubmit={saveNewItem}
         >
           <div className="manual-item-form-heading">
             <div>
               <p className="section-label">
-                {editingItem
-                  ? 'EDITAR LÍNEA'
-                  : 'AÑADIR AL DÍA ' +
-                    day.day_number}
+                AÑADIR AL DÍA{' '}
+                {day.day_number}
               </p>
 
-              <h4>
-                {editingItem
-                  ? editingItem.title
-                  : 'Nueva línea'}
-              </h4>
+              <h4>Nueva línea</h4>
             </div>
 
             <button
               className="form-close-button"
               type="button"
-              onClick={closeItemForm}
+              onClick={closeNewItemForm}
               aria-label="Cerrar formulario"
             >
               ×
             </button>
           </div>
 
-          {!editingItem && (
-            <div className="entry-mode-selector">
-              <button
-                className={
-                  entryMode === 'manual'
-                    ? 'selected'
-                    : ''
-                }
-                type="button"
-                onClick={() =>
-                  changeEntryMode('manual')
-                }
-              >
-                ✏️ Línea manual
-              </button>
+          <div className="entry-mode-selector">
+            <button
+              className={
+                entryMode === 'manual'
+                  ? 'selected'
+                  : ''
+              }
+              type="button"
+              onClick={() =>
+                changeEntryMode('manual')
+              }
+            >
+              ✏️ Línea manual
+            </button>
 
-              <button
-                className={
-                  entryMode === 'activity'
-                    ? 'selected'
-                    : ''
-                }
-                type="button"
-                onClick={() =>
-                  changeEntryMode('activity')
-                }
-              >
-                🔗 Actividad existente
-              </button>
-            </div>
-          )}
+            <button
+              className={
+                entryMode === 'activity'
+                  ? 'selected'
+                  : ''
+              }
+              type="button"
+              onClick={() =>
+                changeEntryMode('activity')
+              }
+            >
+              🔗 Actividad existente
+            </button>
+          </div>
 
           {entryMode === 'activity' && (
             <>
@@ -1584,11 +1479,6 @@ function DayItems({ day }) {
 
                   {availableActivities.map(
                     (activity) => {
-                      const priority =
-                        getPriority(
-                          activity.priority
-                        )
-
                       const city =
                         getCity(activity.city)
 
@@ -1597,7 +1487,11 @@ function DayItems({ day }) {
                           key={activity.id}
                           value={activity.id}
                         >
-                          {priority.icon}{' '}
+                          {
+                            getPriority(
+                              activity.priority
+                            ).icon
+                          }{' '}
                           {activity.name}
                           {' · '}
                           {city.label}
@@ -1643,10 +1537,6 @@ function DayItems({ day }) {
                 <textarea
                   name="activity_note"
                   rows="3"
-                  defaultValue={
-                    editingItem?.description ||
-                    ''
-                  }
                   placeholder="Ej. Visitar a primera hora..."
                 />
               </label>
@@ -1660,10 +1550,7 @@ function DayItems({ day }) {
 
                 <select
                   name="item_type"
-                  defaultValue={
-                    editingItem?.item_type ||
-                    'transport'
-                  }
+                  defaultValue="transport"
                 >
                   {manualTypes.map((type) => (
                     <option
@@ -1683,9 +1570,6 @@ function DayItems({ day }) {
                 <input
                   name="title"
                   type="text"
-                  defaultValue={
-                    editingItem?.title || ''
-                  }
                   placeholder="Ej. Shinkansen Tokio → Kioto"
                   required
                 />
@@ -1697,10 +1581,6 @@ function DayItems({ day }) {
                 <textarea
                   name="description"
                   rows="3"
-                  defaultValue={
-                    editingItem?.description ||
-                    ''
-                  }
                   placeholder="Número de tren, asiento, notas..."
                 />
               </label>
@@ -1711,9 +1591,6 @@ function DayItems({ day }) {
                 <input
                   name="link"
                   type="url"
-                  defaultValue={
-                    editingItem?.link || ''
-                  }
                   placeholder="Reserva o Google Maps"
                 />
               </label>
@@ -1727,14 +1604,6 @@ function DayItems({ day }) {
               <input
                 name="start_time"
                 type="time"
-                defaultValue={
-                  editingItem?.start_time
-                    ? editingItem.start_time.slice(
-                        0,
-                        5
-                      )
-                    : ''
-                }
               />
             </label>
 
@@ -1744,14 +1613,6 @@ function DayItems({ day }) {
               <input
                 name="end_time"
                 type="time"
-                defaultValue={
-                  editingItem?.end_time
-                    ? editingItem.end_time.slice(
-                        0,
-                        5
-                      )
-                    : ''
-                }
               />
             </label>
           </div>
@@ -1763,14 +1624,12 @@ function DayItems({ day }) {
           >
             {savingItem
               ? 'Guardando...'
-              : editingItem
-                ? 'Guardar cambios'
-                : 'Añadir al itinerario'}
+              : 'Añadir al itinerario'}
           </button>
         </form>
       )}
 
-      {!showItemForm && (
+      {!showNewItemForm && (
         <button
           className="secondary-action-button active"
           type="button"
@@ -1780,109 +1639,520 @@ function DayItems({ day }) {
         </button>
       )}
 
-      {activityDetails && (
+      {informationItem && (
         <div
-          className="activity-modal-backdrop"
+          className="compact-panel-backdrop"
           role="presentation"
-          onClick={closeActivityDetails}
+          onClick={closeInformation}
         >
           <article
-            className="activity-modal"
+            className="compact-panel"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="activity-modal-title"
+            aria-labelledby="information-panel-title"
             onClick={(event) =>
               event.stopPropagation()
             }
           >
             <button
-              className="activity-modal-close"
+              className="compact-panel-close"
               type="button"
-              onClick={closeActivityDetails}
-              aria-label="Cerrar ficha"
+              onClick={closeInformation}
+              aria-label="Cerrar información"
             >
               ×
             </button>
 
-            <span className="activity-modal-icon">
-              {
-                getActivityType(
-                  activityDetails.item_type
-                ).icon
-              }
+            <span className="compact-panel-icon">
+              {informationIcon}
             </span>
 
             <p className="section-label">
-              {
-                getActivityType(
-                  activityDetails.item_type
-                ).label
-              }
+              {informationIsActivity
+                ? informationActivityType.label
+                : informationManualType.label}
             </p>
 
-            <h2 id="activity-modal-title">
-              {activityDetails.name}
+            <h2 id="information-panel-title">
+              {informationTitle}
             </h2>
 
-            <div className="activity-modal-meta">
-              <span>
-                {
-                  getPriority(
-                    activityDetails.priority
-                  ).icon
-                }{' '}
-                {
-                  getPriority(
-                    activityDetails.priority
-                  ).label
-                }
-              </span>
+            {(informationItem.start_time ||
+              informationItem.end_time) && (
+              <p className="compact-panel-time">
+                🕒{' '}
+                {formatTime(
+                  informationItem.start_time
+                )}
 
-              {activityDetails.category && (
-                <span>
-                  {activityDetails.category}
-                </span>
-              )}
-
-              {activityDetails.neighborhood && (
-                <span>
-                  📍{' '}
-                  {
-                    activityDetails.neighborhood
-                  }
-                </span>
-              )}
-
-              {activityDetails.estimated_duration && (
-                <span>
-                  ⏱️{' '}
-                  {
-                    activityDetails.estimated_duration
-                  }{' '}
-                  min
-                </span>
-              )}
-            </div>
-
-            {activityDetails.description && (
-              <p className="activity-modal-description">
-                {activityDetails.description}
+                {informationItem.end_time
+                  ? ' → ' +
+                    formatTime(
+                      informationItem.end_time
+                    )
+                  : ''}
               </p>
             )}
 
-            {activityDetails.link && (
+            {informationIsActivity && (
+              <div className="activity-modal-meta">
+                <span>
+                  {
+                    getPriority(
+                      informationActivity.priority
+                    ).icon
+                  }{' '}
+                  {
+                    getPriority(
+                      informationActivity.priority
+                    ).label
+                  }
+                </span>
+
+                {informationActivity.category && (
+                  <span>
+                    {
+                      informationActivity.category
+                    }
+                  </span>
+                )}
+
+                {informationActivity.neighborhood && (
+                  <span>
+                    📍{' '}
+                    {
+                      informationActivity.neighborhood
+                    }
+                  </span>
+                )}
+
+                {informationActivity.estimated_duration && (
+                  <span>
+                    ⏱️{' '}
+                    {
+                      informationActivity.estimated_duration
+                    }{' '}
+                    min
+                  </span>
+                )}
+              </div>
+            )}
+
+            {informationItem.description && (
+              <div className="compact-panel-section">
+                <span>NOTA DEL DÍA</span>
+
+                <p>
+                  {informationItem.description}
+                </p>
+              </div>
+            )}
+
+            {informationIsActivity &&
+              informationActivity.description && (
+                <div className="compact-panel-section">
+                  <span>DESCRIPCIÓN</span>
+
+                  <p>
+                    {
+                      informationActivity.description
+                    }
+                  </p>
+                </div>
+              )}
+
+            {informationSupportsBooking && (
+              <div className="compact-info-statuses">
+                <button
+                  className={
+                    informationItem.reserved
+                      ? 'booking-status selected'
+                      : 'booking-status'
+                  }
+                  type="button"
+                  disabled={
+                    updatingItemId ===
+                    informationItem.id
+                  }
+                  onClick={() =>
+                    toggleBookingStatus(
+                      informationItem,
+                      'reserved'
+                    )
+                  }
+                >
+                  {informationItem.reserved
+                    ? '✓ Reservado'
+                    : '○ Pendiente de reservar'}
+                </button>
+
+                <button
+                  className={
+                    informationItem.paid
+                      ? 'booking-status paid selected'
+                      : 'booking-status paid'
+                  }
+                  type="button"
+                  disabled={
+                    updatingItemId ===
+                    informationItem.id
+                  }
+                  onClick={() =>
+                    toggleBookingStatus(
+                      informationItem,
+                      'paid'
+                    )
+                  }
+                >
+                  {informationItem.paid
+                    ? '✓ Pagado'
+                    : '○ Pendiente de pago'}
+                </button>
+              </div>
+            )}
+
+            {informationLink && (
               <button
-                className="save-button"
+                className="compact-panel-link"
                 type="button"
                 onClick={() =>
                   openExternalLink(
-                    activityDetails.link
+                    informationLink
                   )
                 }
               >
-                Google Maps
+                {informationIsActivity
+                  ? 'Google Maps'
+                  : 'Abrir enlace'}
               </button>
             )}
+          </article>
+        </div>
+      )}
+
+      {editingItem && (
+        <div
+          className="compact-panel-backdrop"
+          role="presentation"
+          onClick={closeEditor}
+        >
+          <article
+            className="compact-panel compact-edit-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-panel-title"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <button
+              className="compact-panel-close"
+              type="button"
+              onClick={closeEditor}
+              aria-label="Cerrar edición"
+            >
+              ×
+            </button>
+
+            <p className="section-label">
+              EDITAR LÍNEA
+            </p>
+
+            <h2 id="edit-panel-title">
+              {getLinkedActivity(
+                editingItem.activity_id
+              )?.name || editingItem.title}
+            </h2>
+
+            <form
+              className="compact-edit-form"
+              onSubmit={saveEditedItem}
+              key={'edit-' + editingItem.id}
+            >
+              {entryMode === 'activity' ? (
+                <>
+                  <label>
+                    Actividad
+
+                    <select
+                      name="activity_id"
+                      value={selectedActivityId}
+                      onChange={(event) =>
+                        setSelectedActivityId(
+                          event.target.value
+                        )
+                      }
+                      required
+                    >
+                      <option value="">
+                        Seleccionar actividad
+                      </option>
+
+                      {availableActivities.map(
+                        (activity) => {
+                          const city =
+                            getCity(
+                              activity.city
+                            )
+
+                          return (
+                            <option
+                              key={activity.id}
+                              value={activity.id}
+                            >
+                              {
+                                getPriority(
+                                  activity.priority
+                                ).icon
+                              }{' '}
+                              {activity.name}
+                              {' · '}
+                              {city.label}
+                            </option>
+                          )
+                        }
+                      )}
+                    </select>
+                  </label>
+
+                  <label>
+                    Nota específica para este día
+
+                    <textarea
+                      name="activity_note"
+                      rows="3"
+                      defaultValue={
+                        editingItem.description ||
+                        ''
+                      }
+                    />
+                  </label>
+                </>
+              ) : (
+                <>
+                  <label>
+                    Tipo de línea
+
+                    <select
+                      name="item_type"
+                      defaultValue={
+                        editingItem.item_type ||
+                        'manual'
+                      }
+                    >
+                      {manualTypes.map(
+                        (type) => (
+                          <option
+                            key={type.value}
+                            value={type.value}
+                          >
+                            {type.icon}{' '}
+                            {type.label}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </label>
+
+                  <label>
+                    Título
+
+                    <input
+                      name="title"
+                      type="text"
+                      defaultValue={
+                        editingItem.title || ''
+                      }
+                      required
+                    />
+                  </label>
+
+                  <label>
+                    Detalles
+
+                    <textarea
+                      name="description"
+                      rows="3"
+                      defaultValue={
+                        editingItem.description ||
+                        ''
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    Enlace opcional
+
+                    <input
+                      name="link"
+                      type="url"
+                      defaultValue={
+                        editingItem.link || ''
+                      }
+                    />
+                  </label>
+                </>
+              )}
+
+              <div className="manual-time-grid">
+                <label>
+                  Hora de inicio
+
+                  <input
+                    name="start_time"
+                    type="time"
+                    defaultValue={
+                      editingItem.start_time
+                        ? editingItem.start_time.slice(
+                            0,
+                            5
+                          )
+                        : ''
+                    }
+                  />
+                </label>
+
+                <label>
+                  Hora de fin
+
+                  <input
+                    name="end_time"
+                    type="time"
+                    defaultValue={
+                      editingItem.end_time
+                        ? editingItem.end_time.slice(
+                            0,
+                            5
+                          )
+                        : ''
+                    }
+                  />
+                </label>
+              </div>
+
+              <button
+                className="save-button"
+                type="submit"
+                disabled={savingItem}
+              >
+                {savingItem
+                  ? 'Guardando...'
+                  : 'Guardar cambios'}
+              </button>
+            </form>
+
+            {!editingItem.start_time && (
+              <div className="compact-edit-section">
+                <span>
+                  ORDEN DE ELEMENTOS SIN HORA
+                </span>
+
+                <div className="compact-order-buttons">
+                  <button
+                    type="button"
+                    disabled={
+                      !canMoveEditingUp ||
+                      updatingItemId !== null
+                    }
+                    onClick={() =>
+                      moveUntimedItem(
+                        editingItem,
+                        'up'
+                      )
+                    }
+                  >
+                    ↑ Subir
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={
+                      !canMoveEditingDown ||
+                      updatingItemId !== null
+                    }
+                    onClick={() =>
+                      moveUntimedItem(
+                        editingItem,
+                        'down'
+                      )
+                    }
+                  >
+                    ↓ Bajar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {targetDays.length > 0 && (
+              <div className="compact-edit-section">
+                <span>
+                  MOVER A OTRO DÍA
+                </span>
+
+                <select
+                  value={targetDayId}
+                  onChange={(event) =>
+                    setTargetDayId(
+                      event.target.value
+                    )
+                  }
+                >
+                  <option value="">
+                    Seleccionar día
+                  </option>
+
+                  {targetDays.map(
+                    (targetDay) => {
+                      const city =
+                        getCity(targetDay.city)
+
+                      return (
+                        <option
+                          key={targetDay.id}
+                          value={targetDay.id}
+                        >
+                          Día{' '}
+                          {
+                            targetDay.day_number
+                          }
+                          {' · '}
+                          {city.emoji}{' '}
+                          {city.label}
+                          {' · '}
+                          {targetDay.title}
+                        </option>
+                      )
+                    }
+                  )}
+                </select>
+
+                <button
+                  className="compact-move-button"
+                  type="button"
+                  disabled={
+                    !targetDayId ||
+                    updatingItemId !== null
+                  }
+                  onClick={moveEditedItem}
+                >
+                  {updatingItemId ===
+                  editingItem.id
+                    ? 'Moviendo...'
+                    : 'Mover a este día'}
+                </button>
+              </div>
+            )}
+
+            <button
+              className="compact-delete-button"
+              type="button"
+              disabled={
+                updatingItemId !== null
+              }
+              onClick={deleteEditedItem}
+            >
+              Eliminar del día
+            </button>
           </article>
         </div>
       )}

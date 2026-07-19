@@ -132,20 +132,77 @@ function Reservations({
     }
   }, [hotels, transports])
 
-  const visibleHotels = useMemo(() => {
-    return hotels.filter((hotel) => {
-      if (reservationFilter === 'pending') {
-        return !hotel.reserved || !hotel.paid
-      }
-
-      if (
-        reservationFilter === 'completed'
-      ) {
-        return hotel.reserved && hotel.paid
-      }
-
-      return true
-    })
+  const visibleTransports = useMemo(() => {
+    return transports
+      .filter((transport) => {
+        if (
+          reservationFilter === 'pending'
+        ) {
+          return (
+            !transport.reserved ||
+            !transport.paid
+          )
+        }
+  
+        if (
+          reservationFilter === 'completed'
+        ) {
+          return (
+            transport.reserved &&
+            transport.paid
+          )
+        }
+  
+        return true
+      })
+      .sort((first, second) => {
+        const firstDay = days.find(
+          (day) => day.id === first.day_id
+        )
+  
+        const secondDay = days.find(
+          (day) => day.id === second.day_id
+        )
+  
+        const firstDayNumber = Number(
+          firstDay?.day_number ?? 999
+        )
+  
+        const secondDayNumber = Number(
+          secondDay?.day_number ?? 999
+        )
+  
+        if (
+          firstDayNumber !== secondDayNumber
+        ) {
+          return (
+            firstDayNumber -
+            secondDayNumber
+          )
+        }
+  
+        const firstTime =
+          first.start_time || '99:99:99'
+  
+        const secondTime =
+          second.start_time || '99:99:99'
+  
+        if (firstTime !== secondTime) {
+          return firstTime.localeCompare(
+            secondTime
+          )
+        }
+  
+        return (
+          Number(first.position || 0) -
+          Number(second.position || 0)
+        )
+      })
+  }, [
+    transports,
+    reservationFilter,
+    days,
+  ])
   }, [hotels, reservationFilter])
 
   const visibleTransports = useMemo(() => {

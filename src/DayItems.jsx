@@ -217,10 +217,14 @@ function DayItems({ day }) {
       description,
       link,
       position: editingItem
-        ? editingItem.position
+        ? Number(editingItem.position || 0)
         : items.length,
     }
 
+    /*
+     * Si una línea deja de ser transporte o alojamiento,
+     * eliminamos sus estados de reserva y pago.
+     */
     if (!selectedType.supportsBooking) {
       itemInformation.reserved = false
       itemInformation.paid = false
@@ -292,16 +296,35 @@ function DayItems({ day }) {
       return
     }
 
-    const nextValue = !item[field]
+    const itemType = getManualType(
+      item.item_type
+    )
+
+    if (!itemType.supportsBooking) {
+      return
+    }
+
+    const nextValue = !Boolean(item[field])
 
     setUpdatingItemId(item.id)
     setErrorMessage('')
 
+    /*
+     * [field] es una propiedad dinámica.
+     *
+     * Si field es "reserved", envía:
+     * { reserved: true }
+     *
+     * Si field es "paid", envía:
+     * { paid: true }
+     */
+    const changes = {
+      nextValue,
+    }
+
     const result = await supabase
       .from('itinerary_items')
-      .update({
-        nextValue,
-      })
+      .update(changes)
       .eq('id', item.id)
       .select()
       .single()
@@ -434,6 +457,9 @@ function DayItems({ day }) {
               item.item_type
             )
 
+            const isUpdating =
+              updatingItemId === item.id
+
             return (
               <article
                 className="manual-timeline-item"
@@ -494,9 +520,7 @@ function DayItems({ day }) {
                             : 'booking-status'
                         }
                         type="button"
-                        disabled={
-                          updatingItemId === item.id
-                        }
+                        disabled={isUpdating}
                         onClick={() =>
                           toggleBookingStatus(
                             item,
@@ -522,9 +546,7 @@ function DayItems({ day }) {
                             : 'booking-status paid'
                         }
                         type="button"
-                        disabled={
-                          updatingItemId === item.id
-                        }
+                        disabled={isUpdating}
                         onClick={() =>
                           toggleBookingStatus(
                             item,
@@ -543,6 +565,12 @@ function DayItems({ day }) {
                           : 'Pendiente de pago'}
                       </button>
                     </div>
+                  )}
+
+                  {isUpdating && (
+                    <p className="booking-updating">
+                      Guardando estado...
+                    </p>
                   )}
 
                   {item.link && (

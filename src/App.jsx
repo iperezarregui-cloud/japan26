@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import './App.css'
+import Auth from './Auth'
+import { supabase } from './supabase'
 
 const initialCities = [
   {
@@ -75,6 +77,9 @@ function loadCities() {
 }
 
 function App() {
+  const [session, setSession] = useState(null)
+  const [checkingSession, setCheckingSession] = useState(true)
+
   const [activeTab, setActiveTab] = useState('itinerary')
   const [cities, setCities] = useState(loadCities)
   const [selectedCityId, setSelectedCityId] = useState(null)
@@ -86,11 +91,49 @@ function App() {
   )
 
   useEffect(() => {
+    async function loadSession() {
+      const {
+        data: { session: currentSession },
+      } = await supabase.auth.getSession()
+
+      setSession(currentSession)
+      setCheckingSession(false)
+    }
+
+    loadSession()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      (_event, currentSession) => {
+        setSession(currentSession)
+        setCheckingSession(false)
+      }
+    )
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [])
+
+  useEffect(() => {
     localStorage.setItem(
       'japan26-cities',
       JSON.stringify(cities)
     )
   }, [cities])
+
+  async function handleLogout() {
+    const shouldLogout = window.confirm(
+      '¿Quieres cerrar la sesión?'
+    )
+
+    if (!shouldLogout) {
+      return
+    }
+
+    await supabase.auth.signOut()
+  }
 
   function changeTab(tab) {
     setActiveTab(tab)
@@ -174,16 +217,36 @@ function App() {
     )
   }
 
+  if (checkingSession) {
+    return (
+      <main className="loading-page">
+        <span>🇯🇵</span>
+        <p>Cargando Japan26...</p>
+      </main>
+    )
+  }
+
+  if (!session) {
+    return <Auth />
+  }
+
   return (
     <main className="app">
-      <header className="header">
+      <header className="header app-header">
         <span className="flag">🇯🇵</span>
 
-        <div>
+        <div className="header-information">
           <p className="eyebrow">MI VIAJE</p>
           <h1>Japón 2026</h1>
           <p>Itinerario de 14 días</p>
         </div>
+
+        <button
+          className="logout-button"
+          onClick={handleLogout}
+        >
+          Salir
+        </button>
       </header>
 
       <section className="tabs">
@@ -398,7 +461,9 @@ function App() {
                     setShowPlaceForm((current) => !current)
                   }
                 >
-                  {showPlaceForm ? 'Cancelar' : '+ Añadir lugar'}
+                  {showPlaceForm
+                    ? 'Cancelar'
+                    : '+ Añadir lugar'}
                 </button>
               </div>
 

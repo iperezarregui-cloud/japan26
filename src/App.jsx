@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import Auth from './Auth'
 import { supabase } from './supabase'
@@ -11,11 +11,6 @@ const cities = [
     days: 'Días 1–4',
     description: 'Barrios, templos, miradores y gastronomía.',
     hotel: 'Hotel pendiente de confirmar',
-    plans: [
-      'Pasear por Shibuya',
-      'Visitar Meiji Jingu',
-      'Explorar Asakusa',
-    ],
   },
   {
     id: 'kyoto',
@@ -24,11 +19,6 @@ const cities = [
     days: 'Días 5–8',
     description: 'Santuarios, jardines y calles tradicionales.',
     hotel: 'Hotel pendiente de confirmar',
-    plans: [
-      'Visitar Fushimi Inari',
-      'Pasear por Gion',
-      'Visitar Kiyomizu-dera',
-    ],
   },
   {
     id: 'osaka',
@@ -37,13 +27,99 @@ const cities = [
     days: 'Días 9–11',
     description: 'Castillo, comida callejera y vida nocturna.',
     hotel: 'Hotel pendiente de confirmar',
-    plans: [
-      'Visitar el castillo de Osaka',
-      'Cenar en Dotonbori',
-      'Explorar Shinsekai',
-    ],
   },
 ]
+
+const sections = {
+  plan: {
+    label: 'Planes',
+    singular: 'plan',
+    icon: '✨',
+    emptyTitle: 'Aún no hay planes añadidos',
+    emptyText: 'Añade experiencias, excursiones y actividades.',
+  },
+  place: {
+    label: 'Lugares',
+    singular: 'lugar',
+    icon: '⛩️',
+    emptyTitle: 'Aún no hay lugares añadidos',
+    emptyText: 'Añade templos, barrios, museos y miradores.',
+  },
+  food: {
+    label: 'Comer',
+    singular: 'restaurante',
+    icon: '🍜',
+    emptyTitle: 'Aún no hay restaurantes añadidos',
+    emptyText: 'Añade restaurantes, mercados y platos que quieras probar.',
+  },
+}
+
+const priorityOptions = [
+  {
+    value: 'essential',
+    label: 'Imprescindible',
+    icon: '🔴',
+  },
+  {
+    value: 'high',
+    label: 'Alta',
+    icon: '🟠',
+  },
+  {
+    value: 'medium',
+    label: 'Media',
+    icon: '🟡',
+  },
+  {
+    value: 'low',
+    label: 'Baja',
+    icon: '⚪',
+  },
+]
+
+const categoryOptions = [
+  'Templo o santuario',
+  'Museo',
+  'Parque',
+  'Mirador',
+  'Mercado',
+  'Barrio',
+  'Paseo',
+  'Compras',
+  'Cultura',
+  'Gastronomía',
+  'Experiencia urbana',
+  'Excursión',
+]
+
+const tokyoNeighborhoods = [
+  'Shinjuku',
+  'Shibuya',
+  'Harajuku',
+  'Asakusa',
+  'Ueno',
+  'Akihabara',
+  'Ginza',
+  'Roppongi',
+  'Odaiba',
+  'Ikebukuro',
+  'Otros',
+]
+
+const priorityOrder = {
+  essential: 1,
+  high: 2,
+  medium: 3,
+  low: 4,
+}
+
+function getPriority(priority) {
+  return (
+    priorityOptions.find(
+      (option) => option.value === priority
+    ) || priorityOptions[2]
+  )
+}
 
 function App() {
   const [session, setSession] = useState(null)
@@ -53,19 +129,92 @@ function App() {
   const [selectedCityId, setSelectedCityId] = useState(null)
   const [citySection, setCitySection] = useState('hotel')
 
-  const [places, setPlaces] = useState([])
-  const [loadingPlaces, setLoadingPlaces] = useState(false)
-  const [placesError, setPlacesError] = useState('')
-  const [showPlaceForm, setShowPlaceForm] = useState(false)
-  const [savingPlace, setSavingPlace] = useState(false)
+  const [activities, setActivities] = useState([])
+  const [loadingActivities, setLoadingActivities] =
+    useState(false)
+  const [activitiesError, setActivitiesError] = useState('')
+
+  const [showActivityForm, setShowActivityForm] =
+    useState(false)
+  const [savingActivity, setSavingActivity] =
+    useState(false)
+  const [activityFilter, setActivityFilter] =
+    useState('all')
 
   const selectedCity = cities.find(
     (city) => city.id === selectedCityId
   )
 
-  const selectedCityPlaces = places.filter(
-    (place) => place.city === selectedCityId
-  )
+  const currentItemType =
+    citySection === 'plans'
+      ? 'plan'
+      : citySection === 'places'
+        ? 'place'
+        : citySection === 'food'
+          ? 'food'
+          : null
+
+  const currentSection = currentItemType
+    ? sections[currentItemType]
+    : null
+
+  const visibleActivities = useMemo(() => {
+    if (!currentItemType || !selectedCityId) {
+      return []
+    }
+
+    return activities
+      .filter(
+        (activity) =>
+          activity.city === selectedCityId &&
+          activity.item_type === currentItemType
+      )
+      .filter((activity) => {
+        if (activityFilter === 'pending') {
+          return !activity.done
+        }
+
+        if (activityFilter === 'done') {
+          return activity.done
+        }
+
+        return true
+      })
+      .sort((first, second) => {
+        if (first.done !== second.done) {
+          return first.done ? 1 : -1
+        }
+
+        if (!first.done && !second.done) {
+          return (
+            priorityOrder[first.priority] -
+            priorityOrder[second.priority]
+          )
+        }
+
+        if (first.completed_at && second.completed_at) {
+          return (
+            new Date(second.completed_at) -
+            new Date(first.completed_at)
+          )
+        }
+
+        return first.name.localeCompare(second.name)
+      })
+  }, [
+    activities,
+    selectedCityId,
+    currentItemType,
+    activityFilter,
+  ])
+
+  const pendingCount = visibleActivities.filter(
+    (activity) => !activity.done
+  ).length
+
+  const doneCount = visibleActivities.filter(
+    (activity) => activity.done
+  ).length
 
   useEffect(() => {
     async function loadSession() {
@@ -95,32 +244,32 @@ function App() {
 
   useEffect(() => {
     if (session) {
-      loadPlaces()
+      loadActivities()
     } else {
-      setPlaces([])
+      setActivities([])
     }
   }, [session])
 
-  async function loadPlaces() {
-    setLoadingPlaces(true)
-    setPlacesError('')
+  async function loadActivities() {
+    setLoadingActivities(true)
+    setActivitiesError('')
 
     const { data, error } = await supabase
-      .from('places')
+      .from('activities')
       .select('*')
       .order('created_at', { ascending: true })
 
     if (error) {
-      console.error('Error al cargar lugares:', error)
+      console.error(error)
 
-      setPlacesError(
-        'No se pudieron cargar los lugares. Comprueba la conexión e inténtalo de nuevo.'
+      setActivitiesError(
+        'No se pudo cargar la información. Comprueba la conexión.'
       )
     } else {
-      setPlaces(data ?? [])
+      setActivities(data ?? [])
     }
 
-    setLoadingPlaces(false)
+    setLoadingActivities(false)
   }
 
   async function handleLogout() {
@@ -128,123 +277,188 @@ function App() {
       '¿Quieres cerrar la sesión?'
     )
 
-    if (!shouldLogout) {
-      return
+    if (shouldLogout) {
+      await supabase.auth.signOut()
     }
-
-    await supabase.auth.signOut()
   }
 
   function changeTab(tab) {
     setActiveTab(tab)
     setSelectedCityId(null)
-    setCitySection('hotel')
-    setShowPlaceForm(false)
-    setPlacesError('')
+    resetCityView()
   }
 
   function openCity(cityId) {
     setSelectedCityId(cityId)
-    setCitySection('hotel')
-    setShowPlaceForm(false)
-    setPlacesError('')
+    resetCityView()
   }
 
   function goBackToCities() {
     setSelectedCityId(null)
+    resetCityView()
+  }
+
+  function resetCityView() {
     setCitySection('hotel')
-    setShowPlaceForm(false)
-    setPlacesError('')
+    setShowActivityForm(false)
+    setActivityFilter('all')
+    setActivitiesError('')
   }
 
   function changeCitySection(section) {
     setCitySection(section)
-    setShowPlaceForm(false)
-    setPlacesError('')
+    setShowActivityForm(false)
+    setActivityFilter('all')
+    setActivitiesError('')
   }
 
-  async function addPlace(event) {
+  async function addActivity(event) {
     event.preventDefault()
 
-    if (!selectedCityId || savingPlace) {
+    if (
+      !selectedCityId ||
+      !currentItemType ||
+      savingActivity
+    ) {
       return
     }
 
     const form = event.currentTarget
     const formData = new FormData(form)
 
-    const name = String(formData.get('name') || '').trim()
-    const description = String(
-      formData.get('description') || ''
+    const name = String(
+      formData.get('name') || ''
     ).trim()
-    const link = String(formData.get('link') || '').trim()
 
     if (!name) {
       return
     }
 
-    setSavingPlace(true)
-    setPlacesError('')
+    const durationValue = String(
+      formData.get('estimated_duration') || ''
+    ).trim()
+
+    const newActivity = {
+      city: selectedCityId,
+      item_type: currentItemType,
+      name,
+      description: String(
+        formData.get('description') || ''
+      ).trim(),
+      link: String(
+        formData.get('link') || ''
+      ).trim(),
+      category:
+        String(formData.get('category') || '').trim() ||
+        null,
+      priority:
+        String(formData.get('priority') || 'medium'),
+      neighborhood:
+        selectedCityId === 'tokyo'
+          ? String(
+              formData.get('neighborhood') || ''
+            ).trim() || null
+          : null,
+      estimated_duration: durationValue
+        ? Number(durationValue)
+        : null,
+    }
+
+    setSavingActivity(true)
+    setActivitiesError('')
 
     const { data, error } = await supabase
-      .from('places')
-      .insert({
-        city: selectedCityId,
-        name,
-        description,
-        link,
-      })
+      .from('activities')
+      .insert(newActivity)
       .select()
       .single()
 
     if (error) {
-      console.error('Error al guardar el lugar:', error)
+      console.error(error)
 
-      setPlacesError(
-        'No se pudo guardar el lugar. Inténtalo de nuevo.'
+      setActivitiesError(
+        `No se pudo guardar el ${currentSection.singular}.`
       )
     } else {
-      setPlaces((currentPlaces) => [
-        ...currentPlaces,
+      setActivities((currentActivities) => [
+        ...currentActivities,
         data,
       ])
 
       form.reset()
-      setShowPlaceForm(false)
+      setShowActivityForm(false)
     }
 
-    setSavingPlace(false)
+    setSavingActivity(false)
   }
 
-  async function deletePlace(placeId) {
+  async function toggleActivityDone(activity) {
+    const nextDone = !activity.done
+    const completedAt = nextDone
+      ? new Date().toISOString()
+      : null
+
+    setActivitiesError('')
+
+    const { data, error } = await supabase
+      .from('activities')
+      .update({
+        done: nextDone,
+        completed_at: completedAt,
+      })
+      .eq('id', activity.id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error(error)
+
+      setActivitiesError(
+        'No se pudo actualizar el estado.'
+      )
+
+      return
+    }
+
+    setActivities((currentActivities) =>
+      currentActivities.map((currentActivity) =>
+        currentActivity.id === activity.id
+          ? data
+          : currentActivity
+      )
+    )
+  }
+
+  async function deleteActivity(activity) {
     const shouldDelete = window.confirm(
-      '¿Quieres eliminar este lugar?'
+      `¿Quieres eliminar “${activity.name}”?`
     )
 
     if (!shouldDelete) {
       return
     }
 
-    setPlacesError('')
+    setActivitiesError('')
 
     const { error } = await supabase
-      .from('places')
+      .from('activities')
       .delete()
-      .eq('id', placeId)
+      .eq('id', activity.id)
 
     if (error) {
-      console.error('Error al eliminar el lugar:', error)
+      console.error(error)
 
-      setPlacesError(
-        'No se pudo eliminar el lugar. Inténtalo de nuevo.'
+      setActivitiesError(
+        'No se pudo eliminar el elemento.'
       )
 
       return
     }
 
-    setPlaces((currentPlaces) =>
-      currentPlaces.filter(
-        (place) => place.id !== placeId
+    setActivities((currentActivities) =>
+      currentActivities.filter(
+        (currentActivity) =>
+          currentActivity.id !== activity.id
       )
     )
   }
@@ -303,31 +517,22 @@ function App() {
 
       {activeTab === 'itinerary' && (
         <section className="content">
-          <p className="date">DÍA 1 · TOKIO</p>
-          <h2>Llegada a Japón</h2>
+          <p className="date">PRÓXIMAMENTE</p>
+          <h2>Itinerario por días</h2>
 
           <p>
-            Aeropuerto, traslado al hotel y primer paseo por Tokio.
+            Aquí añadiremos los días plegables, las actividades
+            vinculadas, los transportes y las líneas manuales.
           </p>
 
           <article className="card">
-            <span className="time">10:30</span>
+            <span className="time">Día 1</span>
 
             <div>
-              <h3>Llegada al aeropuerto</h3>
+              <h3>Llegada a Japón</h3>
               <p>
-                Recoger el equipaje y desplazarse hasta el hotel.
-              </p>
-            </div>
-          </article>
-
-          <article className="card">
-            <span className="time">15:00</span>
-
-            <div>
-              <h3>Check-in en el hotel</h3>
-              <p>
-                Guardar la dirección y los datos de la reserva.
+                Este apartado será editable y tendrá detalle
+                horario al desplegar cada día.
               </p>
             </div>
           </article>
@@ -340,8 +545,8 @@ function App() {
           <h2>Ciudades</h2>
 
           <p>
-            Pulsa una ciudad para consultar el hotel, los planes,
-            los lugares de interés y los restaurantes.
+            Consulta hoteles, planes, lugares de interés y
+            restaurantes.
           </p>
 
           {cities.map((city) => (
@@ -454,64 +659,169 @@ function App() {
             </section>
           )}
 
-          {citySection === 'plans' && (
-            <section className="city-section">
-              <p className="section-label">
-                PLANES
-              </p>
-
-              {selectedCity.plans.map((plan, index) => (
-                <article
-                  className="detail-card"
-                  key={plan}
-                >
-                  <span className="plan-number">
-                    {index + 1}
-                  </span>
-
-                  <div>
-                    <h3>{plan}</h3>
-                    <p>
-                      Información pendiente de completar.
-                    </p>
-                  </div>
-                </article>
-              ))}
-            </section>
-          )}
-
-          {citySection === 'places' && (
+          {currentItemType && (
             <section className="city-section">
               <div className="section-heading">
-                <p className="section-label">
-                  LUGARES DE INTERÉS
-                </p>
+                <div>
+                  <p className="section-label">
+                    {currentSection.label.toUpperCase()}
+                  </p>
+
+                  <p className="activity-summary">
+                    {pendingCount} pendientes · {doneCount} hechos
+                  </p>
+                </div>
 
                 <button
                   className="add-button"
                   onClick={() =>
-                    setShowPlaceForm((current) => !current)
+                    setShowActivityForm(
+                      (current) => !current
+                    )
                   }
                 >
-                  {showPlaceForm
+                  {showActivityForm
                     ? 'Cancelar'
-                    : '+ Añadir lugar'}
+                    : `+ Añadir ${currentSection.singular}`}
                 </button>
               </div>
 
-              {showPlaceForm && (
+              <div className="activity-filters">
+                <button
+                  className={
+                    activityFilter === 'all'
+                      ? 'selected'
+                      : ''
+                  }
+                  onClick={() =>
+                    setActivityFilter('all')
+                  }
+                >
+                  Todos
+                </button>
+
+                <button
+                  className={
+                    activityFilter === 'pending'
+                      ? 'selected'
+                      : ''
+                  }
+                  onClick={() =>
+                    setActivityFilter('pending')
+                  }
+                >
+                  Pendientes
+                </button>
+
+                <button
+                  className={
+                    activityFilter === 'done'
+                      ? 'selected'
+                      : ''
+                  }
+                  onClick={() =>
+                    setActivityFilter('done')
+                  }
+                >
+                  Hechos
+                </button>
+              </div>
+
+              {showActivityForm && (
                 <form
                   className="place-form"
-                  onSubmit={addPlace}
+                  onSubmit={addActivity}
                 >
                   <label>
-                    Nombre del lugar
+                    Nombre
 
                     <input
                       name="name"
                       type="text"
-                      placeholder="Ej. Senso-ji"
+                      placeholder={
+                        currentItemType === 'food'
+                          ? 'Ej. Ichiran Ramen'
+                          : 'Ej. Senso-ji'
+                      }
                       required
+                    />
+                  </label>
+
+                  {selectedCityId === 'tokyo' && (
+                    <label>
+                      Barrio de Tokio
+
+                      <select name="neighborhood">
+                        <option value="">
+                          Seleccionar barrio
+                        </option>
+
+                        {tokyoNeighborhoods.map(
+                          (neighborhood) => (
+                            <option
+                              key={neighborhood}
+                              value={neighborhood}
+                            >
+                              {neighborhood}
+                            </option>
+                          )
+                        )}
+                      </select>
+                    </label>
+                  )}
+
+                  <div className="form-grid">
+                    <label>
+                      Categoría
+
+                      <select name="category">
+                        <option value="">
+                          Sin categoría
+                        </option>
+
+                        {categoryOptions.map(
+                          (category) => (
+                            <option
+                              key={category}
+                              value={category}
+                            >
+                              {category}
+                            </option>
+                          )
+                        )}
+                      </select>
+                    </label>
+
+                    <label>
+                      Prioridad
+
+                      <select
+                        name="priority"
+                        defaultValue="medium"
+                      >
+                        {priorityOptions.map(
+                          (priority) => (
+                            <option
+                              key={priority.value}
+                              value={priority.value}
+                            >
+                              {priority.icon}{' '}
+                              {priority.label}
+                            </option>
+                          )
+                        )}
+                      </select>
+                    </label>
+                  </div>
+
+                  <label>
+                    Duración estimada en minutos
+
+                    <input
+                      name="estimated_duration"
+                      type="number"
+                      min="1"
+                      placeholder="Ej. 90"
                     />
                   </label>
 
@@ -538,101 +848,141 @@ function App() {
                   <button
                     className="save-button"
                     type="submit"
-                    disabled={savingPlace}
+                    disabled={savingActivity}
                   >
-                    {savingPlace
+                    {savingActivity
                       ? 'Guardando...'
-                      : 'Guardar lugar'}
+                      : `Guardar ${currentSection.singular}`}
                   </button>
                 </form>
               )}
 
-              {placesError && (
+              {activitiesError && (
                 <div className="auth-message error">
-                  <strong>Ha ocurrido un problema</strong>
-                  <p>{placesError}</p>
+                  <strong>
+                    Ha ocurrido un problema
+                  </strong>
+                  <p>{activitiesError}</p>
                 </div>
               )}
 
-              {loadingPlaces ? (
+              {loadingActivities ? (
                 <article className="empty-card">
                   <span>⏳</span>
-                  <h3>Cargando lugares...</h3>
-                  <p>
-                    Estamos consultando la información del viaje.
-                  </p>
+                  <h3>Cargando información...</h3>
                 </article>
-              ) : selectedCityPlaces.length === 0 ? (
+              ) : visibleActivities.length === 0 ? (
                 <article className="empty-card">
-                  <span>📍</span>
-
-                  <h3>
-                    Aún no hay lugares añadidos
-                  </h3>
-
-                  <p>
-                    Añade templos, barrios, museos y miradores.
-                  </p>
+                  <span>{currentSection.icon}</span>
+                  <h3>{currentSection.emptyTitle}</h3>
+                  <p>{currentSection.emptyText}</p>
                 </article>
               ) : (
-                selectedCityPlaces.map((place) => (
-                  <article
-                    className="place-card"
-                    key={place.id}
-                  >
-                    <span className="detail-icon">📍</span>
+                visibleActivities.map((activity) => {
+                  const priority = getPriority(
+                    activity.priority
+                  )
 
-                    <div className="place-information">
-                      <h3>{place.name}</h3>
-
-                      {place.description && (
-                        <p>{place.description}</p>
-                      )}
-
-                      {place.link && (
-                        <a
-                          href={place.link}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Abrir en Google Maps ↗
-                        </a>
-                      )}
-                    </div>
-
-                    <button
-                      className="delete-button"
-                      onClick={() =>
-                        deletePlace(place.id)
-                      }
-                      aria-label={`Eliminar ${place.name}`}
+                  return (
+                    <article
+                      className={`activity-card ${
+                        activity.done
+                          ? 'activity-done'
+                          : ''
+                      }`}
+                      key={activity.id}
                     >
-                      ×
-                    </button>
-                  </article>
-                ))
+                      <button
+                        className={`done-button ${
+                          activity.done
+                            ? 'selected'
+                            : ''
+                        }`}
+                        onClick={() =>
+                          toggleActivityDone(activity)
+                        }
+                        aria-label={
+                          activity.done
+                            ? `Marcar ${activity.name} como pendiente`
+                            : `Marcar ${activity.name} como hecho`
+                        }
+                      >
+                        {activity.done ? '✓' : ''}
+                      </button>
+
+                      <div className="activity-information">
+                        <div className="activity-title-row">
+                          <h3>{activity.name}</h3>
+
+                          <span
+                            className={`priority-badge priority-${activity.priority}`}
+                          >
+                            {priority.icon}{' '}
+                            {priority.label}
+                          </span>
+                        </div>
+
+                        <div className="activity-metadata">
+                          {activity.neighborhood && (
+                            <span>
+                              📍 {activity.neighborhood}
+                            </span>
+                          )}
+
+                          {activity.category && (
+                            <span>
+                              {activity.category}
+                            </span>
+                          )}
+
+                          {activity.estimated_duration && (
+                            <span>
+                              ⏱️{' '}
+                              {activity.estimated_duration}{' '}
+                              min
+                            </span>
+                          )}
+                        </div>
+
+                        {activity.description && (
+                          <p>{activity.description}</p>
+                        )}
+
+                        {activity.link && (
+                          <a
+                            href={activity.link}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Abrir en Google Maps ↗
+                          </a>
+                        )}
+
+                        {activity.done && (
+                          <button
+                            className="restore-button"
+                            onClick={() =>
+                              toggleActivityDone(activity)
+                            }
+                          >
+                            Marcar como pendiente
+                          </button>
+                        )}
+                      </div>
+
+                      <button
+                        className="delete-button"
+                        onClick={() =>
+                          deleteActivity(activity)
+                        }
+                        aria-label={`Eliminar ${activity.name}`}
+                      >
+                        ×
+                      </button>
+                    </article>
+                  )
+                })
               )}
-            </section>
-          )}
-
-          {citySection === 'food' && (
-            <section className="city-section">
-              <p className="section-label">
-                RESTAURANTES Y COMIDA
-              </p>
-
-              <article className="empty-card">
-                <span>🍜</span>
-
-                <h3>
-                  Aún no hay restaurantes añadidos
-                </h3>
-
-                <p>
-                  Aquí guardaremos restaurantes y platos
-                  que quieras probar.
-                </p>
-              </article>
             </section>
           )}
         </section>

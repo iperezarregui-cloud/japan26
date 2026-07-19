@@ -40,6 +40,21 @@ const manualTypes = [
   },
 ]
 
+const activityTypeInformation = {
+  plan: {
+    label: 'Plan',
+    icon: '✨',
+  },
+  place: {
+    label: 'Lugar',
+    icon: '📍',
+  },
+  food: {
+    label: 'Comer',
+    icon: '🍜',
+  },
+}
+
 const priorityInformation = {
   essential: {
     label: 'Imprescindible',
@@ -59,19 +74,15 @@ const priorityInformation = {
   },
 }
 
-const activityTypeInformation = {
-  plan: {
-    label: 'Plan',
-    icon: '✨',
-  },
-  place: {
-    label: 'Lugar',
-    icon: '📍',
-  },
-  food: {
-    label: 'Comer',
-    icon: '🍜',
-  },
+const cityNames = {
+  tokyo: 'Tokio',
+  hakone: 'Hakone',
+  kyoto: 'Kioto',
+  nara: 'Nara',
+  osaka: 'Osaka',
+  kobe: 'Kobe',
+  hiroshima: 'Hiroshima',
+  miyajima: 'Miyajima',
 }
 
 function getManualType(type) {
@@ -133,8 +144,8 @@ function DayItems({ day }) {
   const [entryMode, setEntryMode] =
     useState('manual')
 
-  const [selectedActivity, setSelectedActivity] =
-    useState(null)
+  const [selectedActivityId, setSelectedActivityId] =
+    useState('')
 
   const [activityDetails, setActivityDetails] =
     useState(null)
@@ -194,6 +205,19 @@ function DayItems({ day }) {
     })
   }, [activities, day.city])
 
+  const selectedActivity = useMemo(() => {
+    if (!selectedActivityId) {
+      return null
+    }
+
+    return (
+      activities.find(
+        (activity) =>
+          activity.id === Number(selectedActivityId)
+      ) || null
+    )
+  }, [activities, selectedActivityId])
+
   useEffect(() => {
     loadInformation()
   }, [day.id])
@@ -225,17 +249,23 @@ function DayItems({ day }) {
       ])
 
     if (itemsResult.error) {
-      console.error(itemsResult.error)
+      console.error(
+        'Error al cargar las líneas:',
+        itemsResult.error
+      )
 
       setErrorMessage(
-        'No se pudieron cargar las líneas de este día.'
+        'No se pudieron cargar las líneas del día.'
       )
     } else {
       setItems(itemsResult.data || [])
     }
 
     if (activitiesResult.error) {
-      console.error(activitiesResult.error)
+      console.error(
+        'Error al cargar las actividades:',
+        activitiesResult.error
+      )
 
       setErrorMessage(
         'No se pudieron cargar las actividades.'
@@ -254,7 +284,8 @@ function DayItems({ day }) {
 
     return (
       activities.find(
-        (activity) => activity.id === activityId
+        (activity) =>
+          activity.id === Number(activityId)
       ) || null
     )
   }
@@ -262,35 +293,32 @@ function DayItems({ day }) {
   function openNewItemForm() {
     setEditingItem(null)
     setEntryMode('manual')
-    setSelectedActivity(null)
+    setSelectedActivityId('')
     setShowItemForm(true)
     setErrorMessage('')
   }
 
   function openEditItemForm(item) {
     setEditingItem(item)
+    setErrorMessage('')
 
-    if (
-      item.item_type === 'activity' &&
-      item.activity_id
-    ) {
+    if (item.activity_id) {
       setEntryMode('activity')
-      setSelectedActivity(
-        getLinkedActivity(item.activity_id)
+      setSelectedActivityId(
+        String(item.activity_id)
       )
     } else {
       setEntryMode('manual')
-      setSelectedActivity(null)
+      setSelectedActivityId('')
     }
 
     setShowItemForm(true)
-    setErrorMessage('')
   }
 
   function closeItemForm() {
     setEditingItem(null)
-    setSelectedActivity(null)
     setEntryMode('manual')
+    setSelectedActivityId('')
     setShowItemForm(false)
     setErrorMessage('')
   }
@@ -298,17 +326,32 @@ function DayItems({ day }) {
   function changeEntryMode(mode) {
     setEntryMode(mode)
     setEditingItem(null)
-    setSelectedActivity(null)
+    setSelectedActivityId('')
     setErrorMessage('')
   }
 
-  function handleActivitySelection(event) {
-    const activityId = Number(event.target.value)
+  function openActivityDetails(activity) {
+    if (!activity) {
+      return
+    }
 
-    const activity =
-      getLinkedActivity(activityId)
+    setActivityDetails(activity)
+  }
 
-    setSelectedActivity(activity)
+  function closeActivityDetails() {
+    setActivityDetails(null)
+  }
+
+  function openExternalLink(link) {
+    if (!link) {
+      return
+    }
+
+    window.open(
+      link,
+      '_blank',
+      'noopener,noreferrer'
+    )
   }
 
   async function saveItem(event) {
@@ -340,6 +383,7 @@ function DayItems({ day }) {
       setErrorMessage(
         'La hora de fin no puede ser anterior a la hora de inicio.'
       )
+
       return
     }
 
@@ -353,10 +397,11 @@ function DayItems({ day }) {
       const activity =
         getLinkedActivity(activityId)
 
-      if (!activityId || !activity) {
+      if (!activity) {
         setErrorMessage(
           'Selecciona una actividad.'
         )
+
         return
       }
 
@@ -371,11 +416,11 @@ function DayItems({ day }) {
           formData.get('activity_note') || ''
         ).trim(),
         link: activity.link || '',
+        reserved: false,
+        paid: false,
         position: editingItem
           ? Number(editingItem.position || 0)
           : items.length,
-        reserved: false,
-        paid: false,
       }
     } else {
       const itemType = String(
@@ -390,6 +435,7 @@ function DayItems({ day }) {
         setErrorMessage(
           'El título es obligatorio.'
         )
+
         return
       }
 
@@ -441,7 +487,10 @@ function DayItems({ day }) {
     }
 
     if (result.error) {
-      console.error(result.error)
+      console.error(
+        'Error al guardar la línea:',
+        result.error
+      )
 
       setErrorMessage(
         'No se pudo guardar la línea: ' +
@@ -484,10 +533,10 @@ function DayItems({ day }) {
       return
     }
 
-    const itemType =
+    const manualType =
       getManualType(item.item_type)
 
-    if (!itemType.supportsBooking) {
+    if (!manualType.supportsBooking) {
       return
     }
 
@@ -516,7 +565,10 @@ function DayItems({ day }) {
       .single()
 
     if (result.error) {
-      console.error(result.error)
+      console.error(
+        'Error al actualizar el estado:',
+        result.error
+      )
 
       setErrorMessage(
         'No se pudo actualizar el estado: ' +
@@ -541,14 +593,14 @@ function DayItems({ day }) {
     const linkedActivity =
       getLinkedActivity(item.activity_id)
 
-    const itemTitle =
+    const title =
       linkedActivity?.name ||
       item.title ||
       'esta línea'
 
     const shouldDelete = window.confirm(
       '¿Quieres eliminar “' +
-        itemTitle +
+        title +
         '” del itinerario?'
     )
 
@@ -564,11 +616,15 @@ function DayItems({ day }) {
       .eq('id', item.id)
 
     if (result.error) {
-      console.error(result.error)
+      console.error(
+        'Error al eliminar la línea:',
+        result.error
+      )
 
       setErrorMessage(
         'No se pudo eliminar la línea.'
       )
+
       return
     }
 
@@ -585,18 +641,6 @@ function DayItems({ day }) {
     ) {
       closeItemForm()
     }
-  }
-
-  function openExternalLink(link) {
-    if (!link) {
-      return
-    }
-
-    window.open(
-      link,
-      '_blank',
-      'noopener,noreferrer'
-    )
   }
 
   if (loadingItems) {
@@ -641,14 +685,17 @@ function DayItems({ day }) {
       {sortedItems.length > 0 && (
         <div className="manual-timeline">
           {sortedItems.map((item) => {
+            /*
+             * Una línea es una actividad vinculada siempre
+             * que tenga activity_id. No dependemos de item_type.
+             * Esto corrige líneas antiguas que aparecían como
+             * “Otra línea”.
+             */
             const linkedActivity =
-              getLinkedActivity(
-                item.activity_id
-              )
+              getLinkedActivity(item.activity_id)
 
             const isActivity =
-              item.item_type === 'activity' &&
-              linkedActivity
+              Boolean(linkedActivity)
 
             const manualType =
               getManualType(item.item_type)
@@ -659,12 +706,6 @@ function DayItems({ day }) {
                 )
               : null
 
-            const priority = isActivity
-              ? getPriority(
-                  linkedActivity.priority
-                )
-              : null
-
             const title = isActivity
               ? linkedActivity.name
               : item.title
@@ -672,6 +713,10 @@ function DayItems({ day }) {
             const icon = isActivity
               ? activityType.icon
               : manualType.icon
+
+            const mapsLink = isActivity
+              ? linkedActivity.link
+              : item.link
 
             const supportsBooking =
               !isActivity &&
@@ -708,35 +753,23 @@ function DayItems({ day }) {
 
                 <div className="manual-timeline-card">
                   <div className="manual-card-heading">
-                    <button
-                      className={
-                        isActivity
-                          ? 'linked-activity-heading'
-                          : 'manual-heading-static'
-                      }
-                      type="button"
-                      onClick={() => {
-                        if (isActivity) {
-                          setActivityDetails(
-                            linkedActivity
-                          )
-                        }
-                      }}
-                    >
-                      <span className="manual-item-type">
-                        {isActivity
-                          ? activityType.label
-                          : manualType.label}
-                      </span>
-
-                      <h4>{title}</h4>
-
-                      {isActivity && (
-                        <span className="linked-activity-open">
-                          Ver detalles ›
+                    {isActivity ? (
+                      <div className="itinerary-activity-heading">
+                        <span className="manual-item-type">
+                          {activityType.label}
                         </span>
-                      )}
-                    </button>
+
+                        <h4>{title}</h4>
+                      </div>
+                    ) : (
+                      <div>
+                        <span className="manual-item-type">
+                          {manualType.label}
+                        </span>
+
+                        <h4>{title}</h4>
+                      </div>
+                    )}
 
                     <button
                       className="manual-edit-button"
@@ -749,33 +782,38 @@ function DayItems({ day }) {
                     </button>
                   </div>
 
-                  {isActivity && (
-                    <div className="linked-activity-meta">
-                      <span>
-                        {priority.icon}{' '}
-                        {priority.label}
-                      </span>
-
-                      {linkedActivity.category && (
-                        <span>
-                          {linkedActivity.category}
-                        </span>
-                      )}
-
-                      {linkedActivity.estimated_duration && (
-                        <span>
-                          ⏱️{' '}
-                          {
-                            linkedActivity.estimated_duration
-                          }{' '}
-                          min
-                        </span>
-                      )}
-                    </div>
-                  )}
-
                   {item.description && (
                     <p>{item.description}</p>
+                  )}
+
+                  {isActivity && (
+                    <div className="itinerary-activity-actions">
+                      <button
+                        className="activity-details-button"
+                        type="button"
+                        onClick={() =>
+                          openActivityDetails(
+                            linkedActivity
+                          )
+                        }
+                      >
+                        Ver ficha
+                      </button>
+
+                      {mapsLink && (
+                        <button
+                          className="activity-maps-button"
+                          type="button"
+                          onClick={() =>
+                            openExternalLink(
+                              mapsLink
+                            )
+                          }
+                        >
+                          Google Maps ↗
+                        </button>
+                      )}
+                    </div>
                   )}
 
                   {supportsBooking && (
@@ -822,18 +860,12 @@ function DayItems({ day }) {
                     </div>
                   )}
 
-                  {(isActivity
-                    ? linkedActivity.link
-                    : item.link) && (
+                  {!isActivity && item.link && (
                     <button
                       className="manual-link-button"
                       type="button"
                       onClick={() =>
-                        openExternalLink(
-                          isActivity
-                            ? linkedActivity.link
-                            : item.link
-                        )
+                        openExternalLink(item.link)
                       }
                     >
                       Abrir enlace ↗
@@ -886,6 +918,7 @@ function DayItems({ day }) {
               className="form-close-button"
               type="button"
               onClick={closeItemForm}
+              aria-label="Cerrar formulario"
             >
               ×
             </button>
@@ -930,12 +963,11 @@ function DayItems({ day }) {
 
                 <select
                   name="activity_id"
-                  defaultValue={
-                    editingItem?.activity_id ||
-                    ''
-                  }
-                  onChange={
-                    handleActivitySelection
+                  value={selectedActivityId}
+                  onChange={(event) =>
+                    setSelectedActivityId(
+                      event.target.value
+                    )
                   }
                   required
                 >
@@ -950,6 +982,10 @@ function DayItems({ day }) {
                           activity.priority
                         )
 
+                      const cityName =
+                        cityNames[activity.city] ||
+                        activity.city
+
                       return (
                         <option
                           key={activity.id}
@@ -958,7 +994,7 @@ function DayItems({ day }) {
                           {priority.icon}{' '}
                           {activity.name}
                           {' · '}
-                          {activity.city}
+                          {cityName}
                         </option>
                       )
                     }
@@ -974,6 +1010,14 @@ function DayItems({ day }) {
 
                   <span>
                     {
+                      getActivityType(
+                        selectedActivity.item_type
+                      ).label
+                    }
+                  </span>
+
+                  <span>
+                    {
                       getPriority(
                         selectedActivity.priority
                       ).icon
@@ -984,12 +1028,6 @@ function DayItems({ day }) {
                       ).label
                     }
                   </span>
-
-                  {selectedActivity.category && (
-                    <span>
-                      {selectedActivity.category}
-                    </span>
-                  )}
                 </div>
               )}
 
@@ -1136,12 +1174,14 @@ function DayItems({ day }) {
       {activityDetails && (
         <div
           className="activity-modal-backdrop"
-          onClick={() =>
-            setActivityDetails(null)
-          }
+          role="presentation"
+          onClick={closeActivityDetails}
         >
           <article
             className="activity-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="activity-modal-title"
             onClick={(event) =>
               event.stopPropagation()
             }
@@ -1149,9 +1189,8 @@ function DayItems({ day }) {
             <button
               className="activity-modal-close"
               type="button"
-              onClick={() =>
-                setActivityDetails(null)
-              }
+              onClick={closeActivityDetails}
+              aria-label="Cerrar ficha"
             >
               ×
             </button>
@@ -1172,7 +1211,9 @@ function DayItems({ day }) {
               }
             </p>
 
-            <h2>{activityDetails.name}</h2>
+            <h2 id="activity-modal-title">
+              {activityDetails.name}
+            </h2>
 
             <div className="activity-modal-meta">
               <span>
@@ -1228,7 +1269,7 @@ function DayItems({ day }) {
                   )
                 }
               >
-                Abrir en Google Maps ↗
+                Google Maps ↗
               </button>
             )}
           </article>

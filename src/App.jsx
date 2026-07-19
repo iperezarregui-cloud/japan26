@@ -67,21 +67,13 @@ const cities = [
 ]
 
 const sections = {
-  plan: {
-    label: 'Planes',
-    singular: 'plan',
-    icon: '✨',
-    emptyTitle: 'Aún no hay planes añadidos',
-    emptyText:
-      'Añade experiencias, excursiones y actividades.',
-  },
   place: {
-    label: 'Lugares',
-    singular: 'lugar',
+    label: 'Ver y hacer',
+    singular: 'lugar o plan',
     icon: '⛩️',
-    emptyTitle: 'Aún no hay lugares añadidos',
+    emptyTitle: 'Aún no hay lugares o planes añadidos',
     emptyText:
-      'Añade templos, barrios, museos y miradores.',
+      'Añade lugares, actividades, excursiones y experiencias.',
   },
   food: {
     label: 'Comer',
@@ -328,13 +320,11 @@ const [
   )
 
   const currentItemType =
-    citySection === 'plans'
-      ? 'plan'
-      : citySection === 'places'
-        ? 'place'
-        : citySection === 'food'
-          ? 'food'
-          : null
+    citySection === 'places'
+      ? 'place'
+      : citySection === 'food'
+        ? 'food'
+        : null
 
   const currentSection = currentItemType
     ? sections[currentItemType]
@@ -1127,21 +1117,6 @@ const [
 
               <button
                 className={
-                  citySection === 'plans'
-                    ? 'selected'
-                    : ''
-                }
-                type="button"
-                onClick={() =>
-                  changeCitySection('plans')
-                }
-              >
-                ✨
-                <span>Planes</span>
-              </button>
-
-              <button
-                className={
                   citySection === 'places'
                     ? 'selected'
                     : ''
@@ -1152,7 +1127,7 @@ const [
                 }
               >
                 ⛩️
-                <span>Lugares</span>
+                <span>Ver y hacer</span>
               </button>
 
               <button

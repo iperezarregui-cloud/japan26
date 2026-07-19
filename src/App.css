@@ -2707,3 +2707,392 @@ button {
     grid-template-columns: 1fr;
   }
 }
+/* =====================================================
+   EDICIÓN DE PLANES, LUGARES Y RESTAURANTES
+   ===================================================== */
+
+   .activity-form-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+  }
+  
+  .activity-form-heading > div {
+    min-width: 0;
+  }
+  
+  .activity-form-heading h3 {
+    margin: 5px 0 0;
+    color: #172033;
+    font-size: 19px;
+    line-height: 1.3;
+    text-align: left;
+  }
+  
+  .activity-card-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+  }
+  
+  .activity-edit-button {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #f0f1f4;
+    color: #687181;
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+  }
+  
+  .activity-edit-button:hover {
+    background: #e2e4e9;
+    color: #172033;
+  }
+  
+  /* =====================================================
+     ACTIVIDAD VINCULADA DENTRO DEL ITINERARIO
+     ===================================================== */
+  
+  .itinerary-activity-heading {
+    min-width: 0;
+    text-align: left;
+  }
+  
+  .itinerary-activity-heading .manual-item-type {
+    display: block;
+    width: 100%;
+    margin-bottom: 5px;
+    text-align: left;
+  }
+  
+  .itinerary-activity-heading h4 {
+    width: 100%;
+    margin: 0;
+    color: #172033;
+    line-height: 1.35;
+    text-align: left;
+  }
+  
+  .manual-timeline-card > p {
+    text-align: left;
+  }
+  
+  .itinerary-activity-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  
+  .activity-details-button,
+  .activity-maps-button {
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: 10px;
+    font: inherit;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  
+  .activity-details-button {
+    border: 1px solid #dfe2e7;
+    background: #f0f1f4;
+    color: #4f5869;
+  }
+  
+  .activity-details-button:hover {
+    border-color: #cfd3da;
+    background: #e2e4e9;
+    color: #172033;
+  }
+  
+  .activity-maps-button {
+    border: 1px solid #ffd4db;
+    background: #ffe8eb;
+    color: #c23e51;
+  }
+  
+  .activity-maps-button:hover {
+    border-color: #ffc5cf;
+    background: #ffd9df;
+  }
+  
+  /* =====================================================
+     SELECTOR DE ACTIVIDAD O LÍNEA MANUAL
+     ===================================================== */
+  
+  .entry-mode-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 5px;
+    border-radius: 14px;
+    background: #f0f1f4;
+  }
+  
+  .entry-mode-selector button {
+    min-height: 42px;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #707887;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  
+  .entry-mode-selector button.selected {
+    background: #172033;
+    color: #ffffff;
+  }
+  
+  .activity-selection-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    padding: 13px;
+    border: 1px solid #e6e8ec;
+    border-radius: 13px;
+    background: #f4f5f7;
+    text-align: left;
+  }
+  
+  .activity-selection-preview strong {
+    width: 100%;
+    color: #172033;
+    font-size: 14px;
+    text-align: left;
+  }
+  
+  .activity-selection-preview span {
+    padding: 5px 8px;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #687181;
+    font-size: 10px;
+    font-weight: 800;
+  }
+  
+  /* =====================================================
+     FICHA COMPLETA DE ACTIVIDAD
+     ===================================================== */
+  
+  .activity-modal-backdrop {
+    position: fixed;
+    z-index: 1000;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(23, 32, 51, 0.52);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+  }
+  
+  .activity-modal {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    max-height: 88vh;
+    overflow-y: auto;
+    padding: 28px;
+    border-radius: 26px;
+    background: #ffffff;
+    text-align: left;
+    box-shadow: 0 22px 70px rgba(23, 32, 51, 0.24);
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .activity-modal-close {
+    position: absolute;
+    z-index: 2;
+    top: 15px;
+    right: 15px;
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #f0f1f4;
+    color: #687181;
+    font: inherit;
+    font-size: 23px;
+    line-height: 1;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  
+  .activity-modal-close:hover {
+    background: #ffe8eb;
+    color: #c23e51;
+  }
+  
+  .activity-modal-icon {
+    display: grid;
+    width: 58px;
+    height: 58px;
+    margin-bottom: 18px;
+    place-items: center;
+    border-radius: 18px;
+    background: #f5f3ef;
+    font-size: 28px;
+  }
+  
+  .activity-modal .section-label {
+    display: block;
+    width: 100%;
+    margin: 0;
+    text-align: left;
+  }
+  
+  .activity-modal h2 {
+    margin: 6px 45px 0 0;
+    color: #172033;
+    font-size: 25px;
+    line-height: 1.25;
+    text-align: left;
+  }
+  
+  .activity-modal-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 14px;
+    text-align: left;
+  }
+  
+  .activity-modal-meta span {
+    padding: 6px 9px;
+    border-radius: 9px;
+    background: #f0f1f4;
+    color: #687181;
+    font-size: 10px;
+    font-weight: 800;
+  }
+  
+  .activity-modal-description {
+    width: 100%;
+    margin: 18px 0;
+    color: #687181;
+    font-size: 14px;
+    line-height: 1.65;
+    text-align: left;
+  }
+  
+  /* Botón Google Maps compacto dentro de la ficha */
+  
+  .activity-modal .save-button {
+    width: auto;
+    min-width: 0;
+    min-height: 40px;
+    margin-top: 5px;
+    padding: 0 16px;
+    white-space: nowrap;
+  }
+  
+  /* =====================================================
+     ADAPTACIÓN PARA MÓVIL
+     ===================================================== */
+  
+  @media (max-width: 520px) {
+    .activity-form-heading {
+      gap: 12px;
+    }
+  
+    .activity-card-actions {
+      gap: 6px;
+    }
+  
+    .activity-edit-button {
+      width: 28px;
+      height: 28px;
+      font-size: 14px;
+    }
+  
+    .itinerary-activity-actions {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 7px;
+    }
+  
+    .activity-details-button,
+    .activity-maps-button {
+      width: auto;
+      min-width: 0;
+      min-height: 38px;
+      padding: 0 11px;
+      font-size: 10px;
+    }
+  
+    .entry-mode-selector {
+      grid-template-columns: 1fr;
+    }
+  
+    .entry-mode-selector button {
+      min-height: 44px;
+    }
+  
+    .activity-modal-backdrop {
+      align-items: flex-end;
+      padding: 0;
+    }
+  
+    .activity-modal {
+      width: 100%;
+      max-width: none;
+      max-height: 90vh;
+      padding: 25px 20px;
+      padding-bottom: max(
+        25px,
+        env(safe-area-inset-bottom)
+      );
+      border-radius: 26px 26px 0 0;
+    }
+  
+    .activity-modal h2 {
+      margin-right: 42px;
+      font-size: 22px;
+    }
+  
+    .activity-modal-close {
+      width: 40px;
+      height: 40px;
+    }
+  
+    .activity-modal .save-button {
+      width: auto;
+      min-height: 40px;
+      padding: 0 14px;
+    }
+  }
+  
+  @media (max-width: 360px) {
+    .itinerary-activity-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+  
+    .activity-details-button,
+    .activity-maps-button {
+      width: 100%;
+    }
+  }

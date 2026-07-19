@@ -810,7 +810,7 @@ function DayItems({ day }) {
                             )
                           }
                         >
-                          Google Maps ↗
+                          Google Maps
                         </button>
                       )}
                     </div>
@@ -1269,7 +1269,7 @@ function DayItems({ day }) {
                   )
                 }
               >
-                Google Maps ↗
+                Google Maps
               </button>
             )}
           </article>

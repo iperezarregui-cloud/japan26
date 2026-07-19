@@ -166,11 +166,11 @@ const priorityOrder = {
 }
 
 function getPriority(priority) {
-  const selectedPriority = priorityOptions.find(
-    (option) => option.value === priority
+  return (
+    priorityOptions.find(
+      (option) => option.value === priority
+    ) || priorityOptions[2]
   )
-
-  return selectedPriority || priorityOptions[2]
 }
 
 function getCategoryIcon(category, itemType) {
@@ -259,15 +259,13 @@ function formatCityDays(cityId, itineraryDays) {
     end: rangeEnd,
   })
 
-  const formattedRanges = ranges.map(
-    (range) => {
-      if (range.start === range.end) {
-        return String(range.start)
-      }
-
-      return range.start + '–' + range.end
+  const formattedRanges = ranges.map((range) => {
+    if (range.start === range.end) {
+      return String(range.start)
     }
-  )
+
+    return range.start + '–' + range.end
+  })
 
   return 'Días ' + joinDayParts(formattedRanges)
 }
@@ -303,6 +301,9 @@ function App() {
 
   const [savingActivity, setSavingActivity] =
     useState(false)
+
+  const [editingActivity, setEditingActivity] =
+    useState(null)
 
   const [activityFilter, setActivityFilter] =
     useState('all')
@@ -499,6 +500,7 @@ function App() {
   function resetCityView() {
     setCitySection('hotel')
     setShowActivityForm(false)
+    setEditingActivity(null)
     setActivityFilter('all')
     setActivitiesError('')
   }
@@ -530,11 +532,35 @@ function App() {
   function changeCitySection(section) {
     setCitySection(section)
     setShowActivityForm(false)
+    setEditingActivity(null)
     setActivityFilter('all')
     setActivitiesError('')
   }
 
-  async function addActivity(event) {
+  function openNewActivityForm() {
+    setEditingActivity(null)
+    setShowActivityForm(true)
+    setActivitiesError('')
+  }
+
+  function openEditActivityForm(activity) {
+    setEditingActivity(activity)
+    setShowActivityForm(true)
+    setActivitiesError('')
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    })
+  }
+
+  function closeActivityForm() {
+    setEditingActivity(null)
+    setShowActivityForm(false)
+    setActivitiesError('')
+  }
+
+  async function saveActivity(event) {
     event.preventDefault()
 
     if (
@@ -553,6 +579,10 @@ function App() {
     ).trim()
 
     if (!name) {
+      setActivitiesError(
+        'El nombre es obligatorio.'
+      )
+
       return
     }
 
@@ -591,29 +621,58 @@ function App() {
     setSavingActivity(true)
     setActivitiesError('')
 
-    const result = await supabase
-      .from('activities')
-      .insert(activityInformation)
-      .select()
-      .single()
+    let result
+
+    if (editingActivity) {
+      result = await supabase
+        .from('activities')
+        .update(activityInformation)
+        .eq('id', editingActivity.id)
+        .select()
+        .single()
+    } else {
+      result = await supabase
+        .from('activities')
+        .insert(activityInformation)
+        .select()
+        .single()
+    }
 
     if (result.error) {
       console.error(
-        'Error al guardar actividad:',
+        'Error al guardar la actividad:',
         result.error
       )
 
       setActivitiesError(
-        'No se pudo guardar el elemento.'
+        'No se pudo guardar el elemento: ' +
+          result.error.message
       )
     } else {
-      setActivities((currentActivities) => [
-        ...currentActivities,
-        result.data,
-      ])
+      if (editingActivity) {
+        setActivities((currentActivities) =>
+          currentActivities.map(
+            (currentActivity) => {
+              if (
+                currentActivity.id ===
+                editingActivity.id
+              ) {
+                return result.data
+              }
+
+              return currentActivity
+            }
+          )
+        )
+      } else {
+        setActivities((currentActivities) => [
+          ...currentActivities,
+          result.data,
+        ])
+      }
 
       form.reset()
-      setShowActivityForm(false)
+      closeActivityForm()
     }
 
     setSavingActivity(false)
@@ -703,6 +762,13 @@ function App() {
           currentActivity.id !== activity.id
       )
     )
+
+    if (
+      editingActivity &&
+      editingActivity.id === activity.id
+    ) {
+      closeActivityForm()
+    }
   }
 
   if (checkingSession) {
@@ -943,10 +1009,10 @@ function App() {
                   <button
                     className="add-button"
                     type="button"
-                    onClick={() =>
-                      setShowActivityForm(
-                        (current) => !current
-                      )
+                    onClick={
+                      showActivityForm
+                        ? closeActivityForm
+                        : openNewActivityForm
                     }
                   >
                     {showActivityForm
@@ -1006,17 +1072,55 @@ function App() {
                 {showActivityForm && (
                   <form
                     className="place-form"
-                    onSubmit={addActivity}
+                    onSubmit={saveActivity}
+                    key={
+                      editingActivity
+                        ? 'edit-activity-' +
+                          editingActivity.id
+                        : 'new-activity'
+                    }
                   >
+                    <div className="activity-form-heading">
+                      <div>
+                        <p className="section-label">
+                          {editingActivity
+                            ? 'EDITAR ' +
+                              currentSection.singular.toUpperCase()
+                            : 'NUEVO ' +
+                              currentSection.singular.toUpperCase()}
+                        </p>
+
+                        <h3>
+                          {editingActivity
+                            ? editingActivity.name
+                            : 'Añadir ' +
+                              currentSection.singular}
+                        </h3>
+                      </div>
+
+                      <button
+                        className="form-close-button"
+                        type="button"
+                        onClick={closeActivityForm}
+                        aria-label="Cerrar formulario"
+                      >
+                        ×
+                      </button>
+                    </div>
+
                     <label>
                       Nombre
 
                       <input
                         name="name"
                         type="text"
+                        defaultValue={
+                          editingActivity
+                            ? editingActivity.name
+                            : ''
+                        }
                         placeholder={
-                          currentItemType ===
-                          'food'
+                          currentItemType === 'food'
                             ? 'Ej. Ichiran Ramen'
                             : 'Ej. Senso-ji'
                         }
@@ -1029,7 +1133,15 @@ function App() {
                       <label>
                         Barrio de Tokio
 
-                        <select name="neighborhood">
+                        <select
+                          name="neighborhood"
+                          defaultValue={
+                            editingActivity
+                              ? editingActivity.neighborhood ||
+                                ''
+                              : ''
+                          }
+                        >
                           <option value="">
                             Seleccionar barrio
                           </option>
@@ -1056,7 +1168,15 @@ function App() {
                       <label>
                         Categoría
 
-                        <select name="category">
+                        <select
+                          name="category"
+                          defaultValue={
+                            editingActivity
+                              ? editingActivity.category ||
+                                ''
+                              : ''
+                          }
+                        >
                           <option value="">
                             Sin categoría
                           </option>
@@ -1084,7 +1204,12 @@ function App() {
 
                         <select
                           name="priority"
-                          defaultValue="medium"
+                          defaultValue={
+                            editingActivity
+                              ? editingActivity.priority ||
+                                'medium'
+                              : 'medium'
+                          }
                         >
                           {priorityOptions.map(
                             (priority) => (
@@ -1112,6 +1237,12 @@ function App() {
                         name="estimated_duration"
                         type="number"
                         min="1"
+                        defaultValue={
+                          editingActivity &&
+                          editingActivity.estimated_duration
+                            ? editingActivity.estimated_duration
+                            : ''
+                        }
                         placeholder="Ej. 90"
                       />
                     </label>
@@ -1122,6 +1253,12 @@ function App() {
                       <textarea
                         name="description"
                         rows="3"
+                        defaultValue={
+                          editingActivity
+                            ? editingActivity.description ||
+                              ''
+                            : ''
+                        }
                         placeholder="Qué quieres ver o recordar..."
                       />
                     </label>
@@ -1132,6 +1269,12 @@ function App() {
                       <input
                         name="link"
                         type="url"
+                        defaultValue={
+                          editingActivity
+                            ? editingActivity.link ||
+                              ''
+                            : ''
+                        }
                         placeholder="https://maps.google.com/..."
                       />
                     </label>
@@ -1143,8 +1286,10 @@ function App() {
                     >
                       {savingActivity
                         ? 'Guardando...'
-                        : 'Guardar ' +
-                          currentSection.singular}
+                        : editingActivity
+                          ? 'Guardar cambios'
+                          : 'Guardar ' +
+                            currentSection.singular}
                     </button>
                   </form>
                 )}
@@ -1304,8 +1449,7 @@ function App() {
                                 target="_blank"
                                 rel="noreferrer"
                               >
-                                Abrir en Google
-                                Maps ↗
+                                Abrir en Google Maps
                               </a>
                             )}
 
@@ -1325,21 +1469,39 @@ function App() {
                             )}
                           </div>
 
-                          <button
-                            className="delete-button"
-                            type="button"
-                            onClick={() =>
-                              deleteActivity(
-                                activity
-                              )
-                            }
-                            aria-label={
-                              'Eliminar ' +
-                              activity.name
-                            }
-                          >
-                            ×
-                          </button>
+                          <div className="activity-card-actions">
+                            <button
+                              className="activity-edit-button"
+                              type="button"
+                              onClick={() =>
+                                openEditActivityForm(
+                                  activity
+                                )
+                              }
+                              aria-label={
+                                'Editar ' +
+                                activity.name
+                              }
+                            >
+                              ✎
+                            </button>
+
+                            <button
+                              className="delete-button"
+                              type="button"
+                              onClick={() =>
+                                deleteActivity(
+                                  activity
+                                )
+                              }
+                              aria-label={
+                                'Eliminar ' +
+                                activity.name
+                              }
+                            >
+                              ×
+                            </button>
+                          </div>
                         </article>
                       )
                     }

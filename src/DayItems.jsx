@@ -288,55 +288,55 @@ function DayItems({ day }) {
     if (updatingItemId !== null) {
       return
     }
-
+  
     if (
       field !== 'reserved' &&
       field !== 'paid'
     ) {
       return
     }
-
+  
     const itemType = getManualType(
       item.item_type
     )
-
+  
     if (!itemType.supportsBooking) {
       return
     }
-
+  
     const nextValue = !Boolean(item[field])
-
+  
+    let changes
+  
+    if (field === 'reserved') {
+      changes = {
+        reserved: nextValue,
+      }
+    } else {
+      changes = {
+        paid: nextValue,
+      }
+    }
+  
     setUpdatingItemId(item.id)
     setErrorMessage('')
-
-    /*
-     * [field] es una propiedad dinámica.
-     *
-     * Si field es "reserved", envía:
-     * { reserved: true }
-     *
-     * Si field es "paid", envía:
-     * { paid: true }
-     */
-    const changes = {
-      nextValue,
-    }
-
+  
     const result = await supabase
       .from('itinerary_items')
       .update(changes)
       .eq('id', item.id)
       .select()
       .single()
-
+  
     if (result.error) {
       console.error(
         'Error al actualizar el estado:',
         result.error
       )
-
+  
       setErrorMessage(
-        'No se pudo actualizar el estado.'
+        'No se pudo actualizar el estado: ' +
+          result.error.message
       )
     } else {
       setItems((currentItems) =>
@@ -344,12 +344,12 @@ function DayItems({ day }) {
           if (currentItem.id === item.id) {
             return result.data
           }
-
+  
           return currentItem
         })
       )
     }
-
+  
     setUpdatingItemId(null)
   }
 

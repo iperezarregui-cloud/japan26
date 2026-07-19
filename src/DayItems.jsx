@@ -74,32 +74,57 @@ const priorityInformation = {
   },
 }
 
-const cityNames = {
-  tokyo: 'Tokio',
-  hakone: 'Hakone',
-  kyoto: 'Kioto',
-  nara: 'Nara',
-  osaka: 'Osaka',
-  kobe: 'Kobe',
-  hiroshima: 'Hiroshima',
-  miyajima: 'Miyajima',
+const cityInformation = {
+  tokyo: {
+    label: 'Tokio',
+    emoji: '🗼',
+  },
+  hakone: {
+    label: 'Hakone',
+    emoji: '🗻',
+  },
+  kyoto: {
+    label: 'Kioto',
+    emoji: '⛩️',
+  },
+  nara: {
+    label: 'Nara',
+    emoji: '🦌',
+  },
+  osaka: {
+    label: 'Osaka',
+    emoji: '🏯',
+  },
+  kobe: {
+    label: 'Kobe',
+    emoji: '🥩',
+  },
+  hiroshima: {
+    label: 'Hiroshima',
+    emoji: '🕊️',
+  },
+  miyajima: {
+    label: 'Miyajima',
+    emoji: '⛩️',
+  },
+  other: {
+    label: 'Otra',
+    emoji: '📍',
+  },
 }
 
 function getManualType(type) {
-  const selectedType = manualTypes.find(
-    (manualType) => manualType.value === type
+  return (
+    manualTypes.find(
+      (manualType) =>
+        manualType.value === type
+    ) || {
+      value: type,
+      label: 'Otra línea',
+      icon: '📌',
+      supportsBooking: false,
+    }
   )
-
-  if (selectedType) {
-    return selectedType
-  }
-
-  return {
-    value: type,
-    label: 'Otra línea',
-    icon: '📌',
-    supportsBooking: false,
-  }
 }
 
 function getActivityType(type) {
@@ -118,6 +143,15 @@ function getPriority(priority) {
   )
 }
 
+function getCity(cityId) {
+  return (
+    cityInformation[cityId] || {
+      label: cityId || 'Sin ciudad',
+      emoji: '📍',
+    }
+  )
+}
+
 function formatTime(time) {
   if (!time) {
     return 'Sin hora'
@@ -129,9 +163,15 @@ function formatTime(time) {
 function DayItems({ day }) {
   const [items, setItems] = useState([])
   const [activities, setActivities] = useState([])
+  const [itineraryDays, setItineraryDays] =
+    useState([])
 
-  const [loadingItems, setLoadingItems] = useState(true)
-  const [savingItem, setSavingItem] = useState(false)
+  const [loadingItems, setLoadingItems] =
+    useState(true)
+
+  const [savingItem, setSavingItem] =
+    useState(false)
+
   const [updatingItemId, setUpdatingItemId] =
     useState(null)
 
@@ -144,25 +184,57 @@ function DayItems({ day }) {
   const [entryMode, setEntryMode] =
     useState('manual')
 
-  const [selectedActivityId, setSelectedActivityId] =
-    useState('')
+  const [
+    selectedActivityId,
+    setSelectedActivityId,
+  ] = useState('')
 
   const [activityDetails, setActivityDetails] =
     useState(null)
+
+  const [movingItem, setMovingItem] =
+    useState(null)
+
+  const [targetDayId, setTargetDayId] =
+    useState('')
 
   const [errorMessage, setErrorMessage] =
     useState('')
 
   const sortedItems = useMemo(() => {
     return [...items].sort((first, second) => {
-      const firstTime =
-        first.start_time || '99:99:99'
+      const firstHasTime =
+        Boolean(first.start_time)
 
-      const secondTime =
-        second.start_time || '99:99:99'
+      const secondHasTime =
+        Boolean(second.start_time)
 
-      if (firstTime !== secondTime) {
-        return firstTime.localeCompare(secondTime)
+      if (
+        firstHasTime &&
+        !secondHasTime
+      ) {
+        return -1
+      }
+
+      if (
+        !firstHasTime &&
+        secondHasTime
+      ) {
+        return 1
+      }
+
+      if (
+        firstHasTime &&
+        secondHasTime
+      ) {
+        const timeComparison =
+          first.start_time.localeCompare(
+            second.start_time
+          )
+
+        if (timeComparison !== 0) {
+          return timeComparison
+        }
       }
 
       return (
@@ -172,37 +244,57 @@ function DayItems({ day }) {
     })
   }, [items])
 
+  const itemsWithoutTime = useMemo(() => {
+    return sortedItems.filter(
+      (item) => !item.start_time
+    )
+  }, [sortedItems])
+
   const availableActivities = useMemo(() => {
-    return [...activities].sort((first, second) => {
-      const firstSameCity =
-        first.city === day.city ? 0 : 1
+    return [...activities].sort(
+      (first, second) => {
+        const firstSameCity =
+          first.city === day.city ? 0 : 1
 
-      const secondSameCity =
-        second.city === day.city ? 0 : 1
+        const secondSameCity =
+          second.city === day.city ? 0 : 1
 
-      if (firstSameCity !== secondSameCity) {
-        return firstSameCity - secondSameCity
+        if (
+          firstSameCity !== secondSameCity
+        ) {
+          return (
+            firstSameCity -
+            secondSameCity
+          )
+        }
+
+        const priorityOrder = {
+          essential: 1,
+          high: 2,
+          medium: 3,
+          low: 4,
+        }
+
+        const firstPriority =
+          priorityOrder[first.priority] || 3
+
+        const secondPriority =
+          priorityOrder[second.priority] || 3
+
+        if (
+          firstPriority !== secondPriority
+        ) {
+          return (
+            firstPriority -
+            secondPriority
+          )
+        }
+
+        return first.name.localeCompare(
+          second.name
+        )
       }
-
-      const priorityOrder = {
-        essential: 1,
-        high: 2,
-        medium: 3,
-        low: 4,
-      }
-
-      const firstPriority =
-        priorityOrder[first.priority] || 3
-
-      const secondPriority =
-        priorityOrder[second.priority] || 3
-
-      if (firstPriority !== secondPriority) {
-        return firstPriority - secondPriority
-      }
-
-      return first.name.localeCompare(second.name)
-    })
+    )
   }, [activities, day.city])
 
   const selectedActivity = useMemo(() => {
@@ -213,10 +305,18 @@ function DayItems({ day }) {
     return (
       activities.find(
         (activity) =>
-          activity.id === Number(selectedActivityId)
+          activity.id ===
+          Number(selectedActivityId)
       ) || null
     )
   }, [activities, selectedActivityId])
+
+  const targetDays = useMemo(() => {
+    return itineraryDays.filter(
+      (itineraryDay) =>
+        itineraryDay.id !== day.id
+    )
+  }, [itineraryDays, day.id])
 
   useEffect(() => {
     loadInformation()
@@ -226,27 +326,41 @@ function DayItems({ day }) {
     setLoadingItems(true)
     setErrorMessage('')
 
-    const [itemsResult, activitiesResult] =
-      await Promise.all([
-        supabase
-          .from('itinerary_items')
-          .select('*')
-          .eq('day_id', day.id)
-          .order('start_time', {
-            ascending: true,
-            nullsFirst: false,
-          })
-          .order('position', {
-            ascending: true,
-          }),
+    const [
+      itemsResult,
+      activitiesResult,
+      daysResult,
+    ] = await Promise.all([
+      supabase
+        .from('itinerary_items')
+        .select('*')
+        .eq('day_id', day.id)
+        .order('start_time', {
+          ascending: true,
+          nullsFirst: false,
+        })
+        .order('position', {
+          ascending: true,
+        }),
 
-        supabase
-          .from('activities')
-          .select('*')
-          .order('name', {
-            ascending: true,
-          }),
-      ])
+      supabase
+        .from('activities')
+        .select('*')
+        .order('name', {
+          ascending: true,
+        }),
+
+      supabase
+        .from('itinerary_days')
+        .select(
+          'id, day_number, city, title'
+        )
+        .order('day_number', {
+          ascending: true,
+        }),
+    ])
+
+    const errors = []
 
     if (itemsResult.error) {
       console.error(
@@ -254,8 +368,8 @@ function DayItems({ day }) {
         itemsResult.error
       )
 
-      setErrorMessage(
-        'No se pudieron cargar las líneas del día.'
+      errors.push(
+        'No se pudieron cargar las líneas.'
       )
     } else {
       setItems(itemsResult.data || [])
@@ -267,11 +381,32 @@ function DayItems({ day }) {
         activitiesResult.error
       )
 
-      setErrorMessage(
+      errors.push(
         'No se pudieron cargar las actividades.'
       )
     } else {
-      setActivities(activitiesResult.data || [])
+      setActivities(
+        activitiesResult.data || []
+      )
+    }
+
+    if (daysResult.error) {
+      console.error(
+        'Error al cargar los días:',
+        daysResult.error
+      )
+
+      errors.push(
+        'No se pudieron cargar los días.'
+      )
+    } else {
+      setItineraryDays(
+        daysResult.data || []
+      )
+    }
+
+    if (errors.length > 0) {
+      setErrorMessage(errors.join(' '))
     }
 
     setLoadingItems(false)
@@ -285,7 +420,8 @@ function DayItems({ day }) {
     return (
       activities.find(
         (activity) =>
-          activity.id === Number(activityId)
+          activity.id ===
+          Number(activityId)
       ) || null
     )
   }
@@ -331,11 +467,9 @@ function DayItems({ day }) {
   }
 
   function openActivityDetails(activity) {
-    if (!activity) {
-      return
+    if (activity) {
+      setActivityDetails(activity)
     }
-
-    setActivityDetails(activity)
   }
 
   function closeActivityDetails() {
@@ -352,6 +486,113 @@ function DayItems({ day }) {
       '_blank',
       'noopener,noreferrer'
     )
+  }
+
+  function openMoveForm(item) {
+    setMovingItem(item)
+    setTargetDayId('')
+    setErrorMessage('')
+  }
+
+  function closeMoveForm() {
+    setMovingItem(null)
+    setTargetDayId('')
+    setErrorMessage('')
+  }
+
+  async function normalizePositions(
+    dayId,
+    excludedItemId = null
+  ) {
+    const result = await supabase
+      .from('itinerary_items')
+      .select('id, start_time, position')
+      .eq('day_id', dayId)
+
+    if (result.error) {
+      console.error(
+        'Error al normalizar posiciones:',
+        result.error
+      )
+
+      return false
+    }
+
+    const dayItems = (result.data || [])
+      .filter(
+        (item) =>
+          item.id !== excludedItemId
+      )
+      .sort((first, second) => {
+        const firstHasTime =
+          Boolean(first.start_time)
+
+        const secondHasTime =
+          Boolean(second.start_time)
+
+        if (
+          firstHasTime &&
+          !secondHasTime
+        ) {
+          return -1
+        }
+
+        if (
+          !firstHasTime &&
+          secondHasTime
+        ) {
+          return 1
+        }
+
+        if (
+          firstHasTime &&
+          secondHasTime
+        ) {
+          const comparison =
+            first.start_time.localeCompare(
+              second.start_time
+            )
+
+          if (comparison !== 0) {
+            return comparison
+          }
+        }
+
+        return (
+          Number(first.position || 0) -
+          Number(second.position || 0)
+        )
+      })
+
+    const updates = dayItems.map(
+      (item, index) =>
+        supabase
+          .from('itinerary_items')
+          .update({
+            position: index,
+          })
+          .eq('id', item.id)
+    )
+
+    const updateResults =
+      await Promise.all(updates)
+
+    const failedUpdate =
+      updateResults.find(
+        (updateResult) =>
+          updateResult.error
+      )
+
+    if (failedUpdate) {
+      console.error(
+        'Error al guardar posiciones:',
+        failedUpdate.error
+      )
+
+      return false
+    }
+
+    return true
   }
 
   async function saveItem(event) {
@@ -372,8 +613,11 @@ function DayItems({ day }) {
       formData.get('end_time') || ''
     )
 
-    const startTime = startTimeValue || null
-    const endTime = endTimeValue || null
+    const startTime =
+      startTimeValue || null
+
+    const endTime =
+      endTimeValue || null
 
     if (
       startTime &&
@@ -413,18 +657,22 @@ function DayItems({ day }) {
         end_time: endTime,
         title: activity.name,
         description: String(
-          formData.get('activity_note') || ''
+          formData.get('activity_note') ||
+            ''
         ).trim(),
         link: activity.link || '',
         reserved: false,
         paid: false,
         position: editingItem
-          ? Number(editingItem.position || 0)
+          ? Number(
+              editingItem.position || 0
+            )
           : items.length,
       }
     } else {
       const itemType = String(
-        formData.get('item_type') || 'manual'
+        formData.get('item_type') ||
+          'manual'
       )
 
       const title = String(
@@ -450,13 +698,16 @@ function DayItems({ day }) {
         end_time: endTime,
         title,
         description: String(
-          formData.get('description') || ''
+          formData.get('description') ||
+            ''
         ).trim(),
         link: String(
           formData.get('link') || ''
         ).trim(),
         position: editingItem
-          ? Number(editingItem.position || 0)
+          ? Number(
+              editingItem.position || 0
+            )
           : items.length,
       }
 
@@ -499,13 +750,11 @@ function DayItems({ day }) {
     } else {
       if (editingItem) {
         setItems((currentItems) =>
-          currentItems.map((item) => {
-            if (item.id === editingItem.id) {
-              return result.data
-            }
-
-            return item
-          })
+          currentItems.map((item) =>
+            item.id === editingItem.id
+              ? result.data
+              : item
+          )
         )
       } else {
         setItems((currentItems) => [
@@ -521,7 +770,10 @@ function DayItems({ day }) {
     setSavingItem(false)
   }
 
-  async function toggleBookingStatus(item, field) {
+  async function toggleBookingStatus(
+    item,
+    field
+  ) {
     if (updatingItemId !== null) {
       return
     }
@@ -540,19 +792,17 @@ function DayItems({ day }) {
       return
     }
 
-    const nextValue = !Boolean(item[field])
+    const nextValue =
+      !Boolean(item[field])
 
-    let changes
-
-    if (field === 'reserved') {
-      changes = {
-        reserved: nextValue,
-      }
-    } else {
-      changes = {
-        paid: nextValue,
-      }
-    }
+    const changes =
+      field === 'reserved'
+        ? {
+            reserved: nextValue,
+          }
+        : {
+            paid: nextValue,
+          }
 
     setUpdatingItemId(item.id)
     setErrorMessage('')
@@ -576,15 +826,217 @@ function DayItems({ day }) {
       )
     } else {
       setItems((currentItems) =>
-        currentItems.map((currentItem) => {
-          if (currentItem.id === item.id) {
-            return result.data
-          }
-
-          return currentItem
-        })
+        currentItems.map((currentItem) =>
+          currentItem.id === item.id
+            ? result.data
+            : currentItem
+        )
       )
     }
+
+    setUpdatingItemId(null)
+  }
+
+  async function moveItem(event) {
+    event.preventDefault()
+
+    if (
+      !movingItem ||
+      !targetDayId ||
+      updatingItemId !== null
+    ) {
+      return
+    }
+
+    const numericTargetDayId =
+      Number(targetDayId)
+
+    const targetDay = itineraryDays.find(
+      (itineraryDay) =>
+        itineraryDay.id ===
+        numericTargetDayId
+    )
+
+    if (!targetDay) {
+      setErrorMessage(
+        'Selecciona un día de destino.'
+      )
+
+      return
+    }
+
+    setUpdatingItemId(movingItem.id)
+    setErrorMessage('')
+
+    const targetItemsResult =
+      await supabase
+        .from('itinerary_items')
+        .select('id')
+        .eq(
+          'day_id',
+          numericTargetDayId
+        )
+
+    if (targetItemsResult.error) {
+      console.error(
+        'Error al preparar el movimiento:',
+        targetItemsResult.error
+      )
+
+      setErrorMessage(
+        'No se pudo preparar el día de destino.'
+      )
+
+      setUpdatingItemId(null)
+      return
+    }
+
+    const newPosition =
+      (targetItemsResult.data || []).length
+
+    const result = await supabase
+      .from('itinerary_items')
+      .update({
+        day_id: numericTargetDayId,
+        position: newPosition,
+      })
+      .eq('id', movingItem.id)
+      .select()
+      .single()
+
+    if (result.error) {
+      console.error(
+        'Error al mover la línea:',
+        result.error
+      )
+
+      setErrorMessage(
+        'No se pudo mover la línea: ' +
+          result.error.message
+      )
+
+      setUpdatingItemId(null)
+      return
+    }
+
+    setItems((currentItems) =>
+      currentItems.filter(
+        (item) =>
+          item.id !== movingItem.id
+      )
+    )
+
+    await normalizePositions(
+      day.id,
+      movingItem.id
+    )
+
+    closeMoveForm()
+    setUpdatingItemId(null)
+  }
+
+  async function moveUntimedItem(
+    item,
+    direction
+  ) {
+    if (
+      item.start_time ||
+      updatingItemId !== null
+    ) {
+      return
+    }
+
+    const currentIndex =
+      itemsWithoutTime.findIndex(
+        (currentItem) =>
+          currentItem.id === item.id
+      )
+
+    const targetIndex =
+      direction === 'up'
+        ? currentIndex - 1
+        : currentIndex + 1
+
+    if (
+      currentIndex < 0 ||
+      targetIndex < 0 ||
+      targetIndex >=
+        itemsWithoutTime.length
+    ) {
+      return
+    }
+
+    const targetItem =
+      itemsWithoutTime[targetIndex]
+
+    const currentPosition =
+      Number(item.position || 0)
+
+    const targetPosition =
+      Number(targetItem.position || 0)
+
+    setUpdatingItemId(item.id)
+    setErrorMessage('')
+
+    const [
+      currentResult,
+      targetResult,
+    ] = await Promise.all([
+      supabase
+        .from('itinerary_items')
+        .update({
+          position: targetPosition,
+        })
+        .eq('id', item.id)
+        .select()
+        .single(),
+
+      supabase
+        .from('itinerary_items')
+        .update({
+          position: currentPosition,
+        })
+        .eq('id', targetItem.id)
+        .select()
+        .single(),
+    ])
+
+    if (
+      currentResult.error ||
+      targetResult.error
+    ) {
+      console.error(
+        'Error al reordenar:',
+        currentResult.error ||
+          targetResult.error
+      )
+
+      setErrorMessage(
+        'No se pudo guardar el nuevo orden.'
+      )
+
+      await loadInformation()
+      setUpdatingItemId(null)
+      return
+    }
+
+    setItems((currentItems) =>
+      currentItems.map((currentItem) => {
+        if (
+          currentItem.id === item.id
+        ) {
+          return currentResult.data
+        }
+
+        if (
+          currentItem.id === targetItem.id
+        ) {
+          return targetResult.data
+        }
+
+        return currentItem
+      })
+    )
 
     setUpdatingItemId(null)
   }
@@ -635,11 +1087,17 @@ function DayItems({ day }) {
       )
     )
 
-    if (
-      editingItem &&
-      editingItem.id === item.id
-    ) {
+    await normalizePositions(
+      day.id,
+      item.id
+    )
+
+    if (editingItem?.id === item.id) {
       closeItemForm()
+    }
+
+    if (movingItem?.id === item.id) {
+      closeMoveForm()
     }
   }
 
@@ -671,12 +1129,12 @@ function DayItems({ day }) {
 
             <div>
               <h4>
-                Todavía no hay líneas horarias
+                Todavía no hay líneas
               </h4>
 
               <p>
-                Añade una actividad existente o una
-                línea manual.
+                Añade una actividad existente
+                o una línea manual.
               </p>
             </div>
           </div>
@@ -685,14 +1143,10 @@ function DayItems({ day }) {
       {sortedItems.length > 0 && (
         <div className="manual-timeline">
           {sortedItems.map((item) => {
-            /*
-             * Una línea es una actividad vinculada siempre
-             * que tenga activity_id. No dependemos de item_type.
-             * Esto corrige líneas antiguas que aparecían como
-             * “Otra línea”.
-             */
             const linkedActivity =
-              getLinkedActivity(item.activity_id)
+              getLinkedActivity(
+                item.activity_id
+              )
 
             const isActivity =
               Boolean(linkedActivity)
@@ -700,11 +1154,12 @@ function DayItems({ day }) {
             const manualType =
               getManualType(item.item_type)
 
-            const activityType = isActivity
-              ? getActivityType(
-                  linkedActivity.item_type
-                )
-              : null
+            const activityType =
+              isActivity
+                ? getActivityType(
+                    linkedActivity.item_type
+                  )
+                : null
 
             const title = isActivity
               ? linkedActivity.name
@@ -724,6 +1179,22 @@ function DayItems({ day }) {
 
             const isUpdating =
               updatingItemId === item.id
+
+            const untimedIndex =
+              itemsWithoutTime.findIndex(
+                (untimedItem) =>
+                  untimedItem.id === item.id
+              )
+
+            const canMoveUp =
+              !item.start_time &&
+              untimedIndex > 0
+
+            const canMoveDown =
+              !item.start_time &&
+              untimedIndex >= 0 &&
+              untimedIndex <
+                itemsWithoutTime.length - 1
 
             return (
               <article
@@ -753,23 +1224,21 @@ function DayItems({ day }) {
 
                 <div className="manual-timeline-card">
                   <div className="manual-card-heading">
-                    {isActivity ? (
-                      <div className="itinerary-activity-heading">
-                        <span className="manual-item-type">
-                          {activityType.label}
-                        </span>
+                    <div
+                      className={
+                        isActivity
+                          ? 'itinerary-activity-heading'
+                          : ''
+                      }
+                    >
+                      <span className="manual-item-type">
+                        {isActivity
+                          ? activityType.label
+                          : manualType.label}
+                      </span>
 
-                        <h4>{title}</h4>
-                      </div>
-                    ) : (
-                      <div>
-                        <span className="manual-item-type">
-                          {manualType.label}
-                        </span>
-
-                        <h4>{title}</h4>
-                      </div>
-                    )}
+                      <h4>{title}</h4>
+                    </div>
 
                     <button
                       className="manual-edit-button"
@@ -865,22 +1334,160 @@ function DayItems({ day }) {
                       className="manual-link-button"
                       type="button"
                       onClick={() =>
-                        openExternalLink(item.link)
+                        openExternalLink(
+                          item.link
+                        )
                       }
                     >
-                      Abrir enlace ↗
+                      Abrir enlace
                     </button>
                   )}
 
-                  <button
-                    className="manual-delete-button"
-                    type="button"
-                    onClick={() =>
-                      deleteItem(item)
-                    }
-                  >
-                    Eliminar del día
-                  </button>
+                  {!item.start_time && (
+                    <div className="untimed-order-actions">
+                      <span>
+                        Orden sin hora
+                      </span>
+
+                      <button
+                        type="button"
+                        disabled={
+                          !canMoveUp ||
+                          isUpdating
+                        }
+                        onClick={() =>
+                          moveUntimedItem(
+                            item,
+                            'up'
+                          )
+                        }
+                      >
+                        ↑ Subir
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={
+                          !canMoveDown ||
+                          isUpdating
+                        }
+                        onClick={() =>
+                          moveUntimedItem(
+                            item,
+                            'down'
+                          )
+                        }
+                      >
+                        ↓ Bajar
+                      </button>
+                    </div>
+                  )}
+
+                  {movingItem?.id ===
+                  item.id ? (
+                    <form
+                      className="move-item-form"
+                      onSubmit={moveItem}
+                    >
+                      <label>
+                        Mover a otro día
+
+                        <select
+                          value={targetDayId}
+                          onChange={(event) =>
+                            setTargetDayId(
+                              event.target.value
+                            )
+                          }
+                          required
+                        >
+                          <option value="">
+                            Seleccionar día
+                          </option>
+
+                          {targetDays.map(
+                            (targetDay) => {
+                              const city =
+                                getCity(
+                                  targetDay.city
+                                )
+
+                              return (
+                                <option
+                                  key={
+                                    targetDay.id
+                                  }
+                                  value={
+                                    targetDay.id
+                                  }
+                                >
+                                  Día{' '}
+                                  {
+                                    targetDay.day_number
+                                  }
+                                  {' · '}
+                                  {city.emoji}{' '}
+                                  {city.label}
+                                  {' · '}
+                                  {
+                                    targetDay.title
+                                  }
+                                </option>
+                              )
+                            }
+                          )}
+                        </select>
+                      </label>
+
+                      <div className="move-item-form-actions">
+                        <button
+                          className="move-item-save-button"
+                          type="submit"
+                          disabled={
+                            !targetDayId ||
+                            isUpdating
+                          }
+                        >
+                          {isUpdating
+                            ? 'Moviendo...'
+                            : 'Mover'}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={closeMoveForm}
+                          disabled={isUpdating}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="manual-secondary-actions">
+                      <button
+                        className="move-item-button"
+                        type="button"
+                        onClick={() =>
+                          openMoveForm(item)
+                        }
+                        disabled={
+                          targetDays.length === 0
+                        }
+                      >
+                        Mover a otro día
+                      </button>
+
+                      <button
+                        className="manual-delete-button"
+                        type="button"
+                        onClick={() =>
+                          deleteItem(item)
+                        }
+                      >
+                        Eliminar del día
+                      </button>
+                    </div>
+                  )}
                 </div>
               </article>
             )
@@ -982,9 +1589,8 @@ function DayItems({ day }) {
                           activity.priority
                         )
 
-                      const cityName =
-                        cityNames[activity.city] ||
-                        activity.city
+                      const city =
+                        getCity(activity.city)
 
                       return (
                         <option
@@ -994,7 +1600,7 @@ function DayItems({ day }) {
                           {priority.icon}{' '}
                           {activity.name}
                           {' · '}
-                          {cityName}
+                          {city.label}
                         </option>
                       )
                     }
@@ -1038,7 +1644,8 @@ function DayItems({ day }) {
                   name="activity_note"
                   rows="3"
                   defaultValue={
-                    editingItem?.description || ''
+                    editingItem?.description ||
+                    ''
                   }
                   placeholder="Ej. Visitar a primera hora..."
                 />
@@ -1063,7 +1670,8 @@ function DayItems({ day }) {
                       key={type.value}
                       value={type.value}
                     >
-                      {type.icon} {type.label}
+                      {type.icon}{' '}
+                      {type.label}
                     </option>
                   ))}
                 </select>
@@ -1090,7 +1698,8 @@ function DayItems({ day }) {
                   name="description"
                   rows="3"
                   defaultValue={
-                    editingItem?.description || ''
+                    editingItem?.description ||
+                    ''
                   }
                   placeholder="Número de tren, asiento, notas..."
                 />
@@ -1238,7 +1847,9 @@ function DayItems({ day }) {
               {activityDetails.neighborhood && (
                 <span>
                   📍{' '}
-                  {activityDetails.neighborhood}
+                  {
+                    activityDetails.neighborhood
+                  }
                 </span>
               )}
 

@@ -4145,3 +4145,250 @@ button {
       grid-template-columns: 1fr;
     }
   }
+  /* =====================================================
+   MOVER ELEMENTOS ENTRE DÍAS
+   ===================================================== */
+
+.manual-secondary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 13px;
+}
+
+.move-item-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #596171;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.move-item-button:hover {
+  color: #172033;
+  text-decoration: underline;
+}
+
+.move-item-button:disabled {
+  color: #b2b7c0;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.manual-secondary-actions .manual-delete-button {
+  display: inline-block;
+  margin-top: 0;
+}
+
+/* Formulario para mover a otro día */
+
+.move-item-form {
+  display: grid;
+  gap: 11px;
+  margin-top: 14px;
+  padding: 13px;
+  border: 1px solid #dfe2e7;
+  border-radius: 13px;
+  background: #f7f8fa;
+}
+
+.move-item-form label {
+  display: grid;
+  gap: 7px;
+  color: #4f5869;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.move-item-form select {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0 11px;
+  border: 1px solid #dfe1e6;
+  border-radius: 11px;
+  outline: none;
+  background: #ffffff;
+  color: #172033;
+  font: inherit;
+  font-size: 12px;
+}
+
+.move-item-form select:focus {
+  border-color: #e84f5f;
+  box-shadow: 0 0 0 3px rgba(232, 79, 95, 0.1);
+}
+
+.move-item-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.move-item-form-actions button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: #eceef2;
+  color: #596171;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.move-item-form-actions button:hover {
+  background: #dfe2e7;
+  color: #172033;
+}
+
+.move-item-form-actions .move-item-save-button {
+  background: #172033;
+  color: #ffffff;
+}
+
+.move-item-form-actions .move-item-save-button:hover {
+  background: #29344a;
+  color: #ffffff;
+}
+
+.move-item-form-actions button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+/* =====================================================
+   ORDEN MANUAL DE ELEMENTOS SIN HORA
+   ===================================================== */
+
+.untimed-order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin-top: 13px;
+  padding: 9px;
+  border: 1px solid #e7e8ec;
+  border-radius: 11px;
+  background: #f7f8fa;
+}
+
+.untimed-order-actions > span {
+  margin-right: auto;
+  color: #9298a4;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.untimed-order-actions button {
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid #dfe2e7;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #596171;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.untimed-order-actions button:hover {
+  border-color: #cfd3da;
+  background: #eceef2;
+  color: #172033;
+}
+
+.untimed-order-actions button:disabled {
+  border-color: #e7e8ec;
+  background: #f1f2f4;
+  color: #b2b7c0;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+/* =====================================================
+   AJUSTES PARA MÓVIL
+   ===================================================== */
+
+@media (max-width: 520px) {
+  .manual-secondary-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .move-item-button,
+  .manual-secondary-actions .manual-delete-button {
+    display: flex;
+    min-height: 36px;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0 8px;
+    border-radius: 9px;
+    text-decoration: none;
+  }
+
+  .move-item-button {
+    border: 1px solid #dfe2e7;
+    background: #f0f1f4;
+  }
+
+  .manual-secondary-actions .manual-delete-button {
+    border: 1px solid #ffd4db;
+    background: #fff0f2;
+  }
+
+  .move-item-button:hover,
+  .manual-secondary-actions
+    .manual-delete-button:hover {
+    text-decoration: none;
+  }
+
+  .move-item-form {
+    padding: 11px;
+  }
+
+  .move-item-form-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .move-item-form-actions button {
+    width: 100%;
+    min-height: 39px;
+  }
+
+  .untimed-order-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .untimed-order-actions > span {
+    grid-column: 1 / -1;
+    margin-right: 0;
+  }
+
+  .untimed-order-actions button {
+    width: 100%;
+    min-height: 36px;
+  }
+}
+
+@media (max-width: 360px) {
+  .manual-secondary-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .move-item-form-actions {
+    grid-template-columns: 1fr;
+  }
+}

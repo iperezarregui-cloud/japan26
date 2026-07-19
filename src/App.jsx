@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import Auth from './Auth'
+import Itinerary from './Itinerary'
 import { supabase } from './supabase'
 
 const cities = [
@@ -130,11 +131,11 @@ const priorityOrder = {
 }
 
 function getPriority(priority) {
-  return (
-    priorityOptions.find(
-      (option) => option.value === priority
-    ) || priorityOptions[2]
+  const selectedPriority = priorityOptions.find(
+    (option) => option.value === priority
   )
+
+  return selectedPriority || priorityOptions[2]
 }
 
 function getCategoryIcon(category, itemType) {
@@ -155,26 +156,25 @@ function getCategoryIcon(category, itemType) {
 
 function App() {
   const [session, setSession] = useState(null)
-  const [checkingSession, setCheckingSession] =
-    useState(true)
+  const [checkingSession, setCheckingSession] = useState(true)
 
-  const [activeTab, setActiveTab] =
-    useState('itinerary')
-  const [selectedCityId, setSelectedCityId] =
-    useState(null)
-  const [citySection, setCitySection] =
-    useState('hotel')
+  const [activeTab, setActiveTab] = useState('itinerary')
+  const [selectedCityId, setSelectedCityId] = useState(null)
+  const [citySection, setCitySection] = useState('hotel')
 
   const [activities, setActivities] = useState([])
   const [loadingActivities, setLoadingActivities] =
     useState(false)
+
   const [activitiesError, setActivitiesError] =
     useState('')
 
   const [showActivityForm, setShowActivityForm] =
     useState(false)
+
   const [savingActivity, setSavingActivity] =
     useState(false)
+
   const [activityFilter, setActivityFilter] =
     useState('all')
 
@@ -196,7 +196,7 @@ function App() {
     : null
 
   const citySectionActivities = useMemo(() => {
-    if (!currentItemType || !selectedCityId) {
+    if (!selectedCityId || !currentItemType) {
       return []
     }
 
@@ -226,10 +226,13 @@ function App() {
         }
 
         if (!first.done && !second.done) {
-          return (
-            priorityOrder[first.priority] -
-            priorityOrder[second.priority]
-          )
+          const firstPriority =
+            priorityOrder[first.priority] || 3
+
+          const secondPriority =
+            priorityOrder[second.priority] || 3
+
+          return firstPriority - secondPriority
         }
 
         if (
@@ -256,27 +259,24 @@ function App() {
 
   useEffect(() => {
     async function loadSession() {
-      const {
-        data: { session: currentSession },
-      } = await supabase.auth.getSession()
+      const result = await supabase.auth.getSession()
 
-      setSession(currentSession)
+      setSession(result.data.session)
       setCheckingSession(false)
     }
 
     loadSession()
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      (_event, currentSession) => {
-        setSession(currentSession)
-        setCheckingSession(false)
-      }
-    )
+    const authListener =
+      supabase.auth.onAuthStateChange(
+        (_event, currentSession) => {
+          setSession(currentSession)
+          setCheckingSession(false)
+        }
+      )
 
     return () => {
-      subscription.unsubscribe()
+      authListener.data.subscription.unsubscribe()
     }
   }, [])
 
@@ -292,19 +292,19 @@ function App() {
     setLoadingActivities(true)
     setActivitiesError('')
 
-    const { data, error } = await supabase
+    const result = await supabase
       .from('activities')
       .select('*')
       .order('created_at', { ascending: true })
 
-    if (error) {
-      console.error(error)
+    if (result.error) {
+      console.error(result.error)
 
       setActivitiesError(
-        'No se pudo cargar la información. Comprueba la conexión.'
+        'No se pudo cargar la información.'
       )
     } else {
-      setActivities(data ?? [])
+      setActivities(result.data || [])
     }
 
     setLoadingActivities(false)
@@ -376,7 +376,7 @@ function App() {
       formData.get('estimated_duration') || ''
     ).trim()
 
-    const newActivity = {
+    const activityInformation = {
       city: selectedCityId,
       item_type: currentItemType,
       name,
@@ -407,22 +407,22 @@ function App() {
     setSavingActivity(true)
     setActivitiesError('')
 
-    const { data, error } = await supabase
+    const result = await supabase
       .from('activities')
-      .insert(newActivity)
+      .insert(activityInformation)
       .select()
       .single()
 
-    if (error) {
-      console.error(error)
+    if (result.error) {
+      console.error(result.error)
 
       setActivitiesError(
-        `No se pudo guardar el ${currentSection.singular}.`
+        'No se pudo guardar el elemento.'
       )
     } else {
       setActivities((currentActivities) => [
         ...currentActivities,
-        data,
+        result.data,
       ])
 
       form.reset()
@@ -441,7 +441,7 @@ function App() {
 
     setActivitiesError('')
 
-    const { data, error } = await supabase
+    const result = await supabase
       .from('activities')
       .update({
         done: nextDone,
@@ -451,8 +451,8 @@ function App() {
       .select()
       .single()
 
-    if (error) {
-      console.error(error)
+    if (result.error) {
+      console.error(result.error)
 
       setActivitiesError(
         'No se pudo actualizar el estado.'
@@ -462,17 +462,21 @@ function App() {
     }
 
     setActivities((currentActivities) =>
-      currentActivities.map((currentActivity) =>
-        currentActivity.id === activity.id
-          ? data
-          : currentActivity
-      )
+      currentActivities.map((currentActivity) => {
+        if (currentActivity.id === activity.id) {
+          return result.data
+        }
+
+        return currentActivity
+      })
     )
   }
 
   async function deleteActivity(activity) {
     const shouldDelete = window.confirm(
-      `¿Quieres eliminar “${activity.name}”?`
+      '¿Quieres eliminar “' +
+        activity.name +
+        '”?'
     )
 
     if (!shouldDelete) {
@@ -481,13 +485,13 @@ function App() {
 
     setActivitiesError('')
 
-    const { error } = await supabase
+    const result = await supabase
       .from('activities')
       .delete()
       .eq('id', activity.id)
 
-    if (error) {
-      console.error(error)
+    if (result.error) {
+      console.error(result.error)
 
       setActivitiesError(
         'No se pudo eliminar el elemento.'
@@ -530,6 +534,7 @@ function App() {
 
         <button
           className="logout-button"
+          type="button"
           onClick={handleLogout}
         >
           Salir
@@ -538,22 +543,24 @@ function App() {
 
       <section className="tabs">
         <button
-          className={`tab ${
+          className={
             activeTab === 'itinerary'
-              ? 'active'
-              : ''
-          }`}
+              ? 'tab active'
+              : 'tab'
+          }
+          type="button"
           onClick={() => changeTab('itinerary')}
         >
           Itinerario
         </button>
 
         <button
-          className={`tab ${
+          className={
             activeTab === 'cities'
-              ? 'active'
-              : ''
-          }`}
+              ? 'tab active'
+              : 'tab'
+          }
+          type="button"
           onClick={() => changeTab('cities')}
         >
           Ciudades
@@ -561,534 +568,532 @@ function App() {
       </section>
 
       {activeTab === 'itinerary' && (
-        <section className="content">
-          <p className="date">PRÓXIMAMENTE</p>
-          <h2>Itinerario por días</h2>
-
-          <p>
-            Aquí añadiremos los días plegables, las
-            actividades vinculadas, los transportes y
-            las líneas manuales.
-          </p>
-
-          <article className="card">
-            <span className="time">Día 1</span>
-
-            <div>
-              <h3>Llegada a Japón</h3>
-              <p>
-                Este apartado será editable y tendrá
-                detalle horario al desplegar cada día.
-              </p>
-            </div>
-          </article>
-        </section>
+        <Itinerary />
       )}
 
-      {activeTab === 'cities' && !selectedCity && (
-        <section className="content">
-          <p className="date">
-            DESTINOS DEL VIAJE
-          </p>
+      {activeTab === 'cities' &&
+        !selectedCity && (
+          <section className="content">
+            <p className="date">
+              DESTINOS DEL VIAJE
+            </p>
 
-          <h2>Ciudades</h2>
+            <h2>Ciudades</h2>
 
-          <p>
-            Consulta hoteles, planes, lugares de interés
-            y restaurantes.
-          </p>
+            <p>
+              Consulta hoteles, planes, lugares de
+              interés y restaurantes.
+            </p>
 
-          {cities.map((city) => (
+            {cities.map((city) => (
+              <button
+                className="card city-card city-button"
+                key={city.id}
+                type="button"
+                onClick={() => openCity(city.id)}
+              >
+                <span className="city-emoji">
+                  {city.emoji}
+                </span>
+
+                <div>
+                  <span className="city-days">
+                    {city.days}
+                  </span>
+
+                  <h3>{city.name}</h3>
+                  <p>{city.description}</p>
+                </div>
+
+                <span className="arrow">›</span>
+              </button>
+            ))}
+          </section>
+        )}
+
+      {activeTab === 'cities' &&
+        selectedCity && (
+          <section className="content">
             <button
-              className="card city-card city-button"
-              key={city.id}
-              onClick={() => openCity(city.id)}
+              className="back-button"
+              type="button"
+              onClick={goBackToCities}
             >
-              <span className="city-emoji">
-                {city.emoji}
+              ← Volver a ciudades
+            </button>
+
+            <div className="city-title">
+              <span className="city-emoji large">
+                {selectedCity.emoji}
               </span>
 
               <div>
-                <span className="city-days">
-                  {city.days}
-                </span>
+                <p className="date">
+                  {selectedCity.days}
+                </p>
 
-                <h3>{city.name}</h3>
-                <p>{city.description}</p>
+                <h2>{selectedCity.name}</h2>
               </div>
-
-              <span className="arrow">›</span>
-            </button>
-          ))}
-        </section>
-      )}
-
-      {activeTab === 'cities' && selectedCity && (
-        <section className="content">
-          <button
-            className="back-button"
-            onClick={goBackToCities}
-          >
-            ← Volver a ciudades
-          </button>
-
-          <div className="city-title">
-            <span className="city-emoji large">
-              {selectedCity.emoji}
-            </span>
-
-            <div>
-              <p className="date">
-                {selectedCity.days}
-              </p>
-
-              <h2>{selectedCity.name}</h2>
             </div>
-          </div>
 
-          <nav className="city-tabs">
-            <button
-              className={
-                citySection === 'hotel'
-                  ? 'selected'
-                  : ''
-              }
-              onClick={() =>
-                changeCitySection('hotel')
-              }
-            >
-              🛏️
-              <span>Hotel</span>
-            </button>
+            <nav className="city-tabs">
+              <button
+                className={
+                  citySection === 'hotel'
+                    ? 'selected'
+                    : ''
+                }
+                type="button"
+                onClick={() =>
+                  changeCitySection('hotel')
+                }
+              >
+                🛏️
+                <span>Hotel</span>
+              </button>
 
-            <button
-              className={
-                citySection === 'plans'
-                  ? 'selected'
-                  : ''
-              }
-              onClick={() =>
-                changeCitySection('plans')
-              }
-            >
-              ✨
-              <span>Planes</span>
-            </button>
+              <button
+                className={
+                  citySection === 'plans'
+                    ? 'selected'
+                    : ''
+                }
+                type="button"
+                onClick={() =>
+                  changeCitySection('plans')
+                }
+              >
+                ✨
+                <span>Planes</span>
+              </button>
 
-            <button
-              className={
-                citySection === 'places'
-                  ? 'selected'
-                  : ''
-              }
-              onClick={() =>
-                changeCitySection('places')
-              }
-            >
-              ⛩️
-              <span>Lugares</span>
-            </button>
+              <button
+                className={
+                  citySection === 'places'
+                    ? 'selected'
+                    : ''
+                }
+                type="button"
+                onClick={() =>
+                  changeCitySection('places')
+                }
+              >
+                ⛩️
+                <span>Lugares</span>
+              </button>
 
-            <button
-              className={
-                citySection === 'food'
-                  ? 'selected'
-                  : ''
-              }
-              onClick={() =>
-                changeCitySection('food')
-              }
-            >
-              🍜
-              <span>Comer</span>
-            </button>
-          </nav>
+              <button
+                className={
+                  citySection === 'food'
+                    ? 'selected'
+                    : ''
+                }
+                type="button"
+                onClick={() =>
+                  changeCitySection('food')
+                }
+              >
+                🍜
+                <span>Comer</span>
+              </button>
+            </nav>
 
-          {citySection === 'hotel' && (
-            <section className="city-section">
-              <p className="section-label">
-                ALOJAMIENTO
-              </p>
+            {citySection === 'hotel' && (
+              <section className="city-section">
+                <p className="section-label">
+                  ALOJAMIENTO
+                </p>
 
-              <article className="detail-card">
-                <span className="detail-icon">
-                  🛏️
-                </span>
-
-                <div>
-                  <h3>
-                    Hotel en {selectedCity.name}
-                  </h3>
-
-                  <p>{selectedCity.hotel}</p>
-                </div>
-              </article>
-            </section>
-          )}
-
-          {currentItemType && (
-            <section className="city-section">
-              <div className="section-heading">
-                <div>
-                  <p className="section-label">
-                    {currentSection.label.toUpperCase()}
-                  </p>
-
-                  <p className="activity-summary">
-                    {pendingCount} pendientes ·{' '}
-                    {doneCount} hechos
-                  </p>
-                </div>
-
-                <button
-                  className="add-button"
-                  onClick={() =>
-                    setShowActivityForm(
-                      (current) => !current
-                    )
-                  }
-                >
-                  {showActivityForm
-                    ? 'Cancelar'
-                    : `+ Añadir ${currentSection.singular}`}
-                </button>
-              </div>
-
-              <div className="activity-filters">
-                <button
-                  className={
-                    activityFilter === 'all'
-                      ? 'selected'
-                      : ''
-                  }
-                  onClick={() =>
-                    setActivityFilter('all')
-                  }
-                >
-                  Todos
-                </button>
-
-                <button
-                  className={
-                    activityFilter === 'pending'
-                      ? 'selected'
-                      : ''
-                  }
-                  onClick={() =>
-                    setActivityFilter('pending')
-                  }
-                >
-                  Pendientes
-                </button>
-
-                <button
-                  className={
-                    activityFilter === 'done'
-                      ? 'selected'
-                      : ''
-                  }
-                  onClick={() =>
-                    setActivityFilter('done')
-                  }
-                >
-                  Hechos
-                </button>
-              </div>
-
-              {showActivityForm && (
-                <form
-                  className="place-form"
-                  onSubmit={addActivity}
-                >
-                  <label>
-                    Nombre
-
-                    <input
-                      name="name"
-                      type="text"
-                      placeholder={
-                        currentItemType === 'food'
-                          ? 'Ej. Ichiran Ramen'
-                          : 'Ej. Senso-ji'
-                      }
-                      required
-                    />
-                  </label>
-
-                  {selectedCityId === 'tokyo' && (
-                    <label>
-                      Barrio de Tokio
-
-                      <select name="neighborhood">
-                        <option value="">
-                          Seleccionar barrio
-                        </option>
-
-                        {tokyoNeighborhoods.map(
-                          (neighborhood) => (
-                            <option
-                              key={neighborhood}
-                              value={neighborhood}
-                            >
-                              {neighborhood}
-                            </option>
-                          )
-                        )}
-                      </select>
-                    </label>
-                  )}
-
-                  <div className="form-grid">
-                    <label>
-                      Categoría
-
-                      <select name="category">
-                        <option value="">
-                          Sin categoría
-                        </option>
-
-                        {categoryOptions.map(
-                          (category) => (
-                            <option
-                              key={category}
-                              value={category}
-                            >
-                              {
-                                categoryIcons[
-                                  category
-                                ]
-                              }{' '}
-                              {category}
-                            </option>
-                          )
-                        )}
-                      </select>
-                    </label>
-
-                    <label>
-                      Prioridad
-
-                      <select
-                        name="priority"
-                        defaultValue="medium"
-                      >
-                        {priorityOptions.map(
-                          (priority) => (
-                            <option
-                              key={priority.value}
-                              value={priority.value}
-                            >
-                              {priority.icon}{' '}
-                              {priority.label}
-                            </option>
-                          )
-                        )}
-                      </select>
-                    </label>
-                  </div>
-
-                  <label>
-                    Duración estimada en minutos
-
-                    <input
-                      name="estimated_duration"
-                      type="number"
-                      min="1"
-                      placeholder="Ej. 90"
-                    />
-                  </label>
-
-                  <label>
-                    Descripción
-
-                    <textarea
-                      name="description"
-                      placeholder="Qué quieres ver o recordar..."
-                      rows="3"
-                    />
-                  </label>
-
-                  <label>
-                    Enlace de Google Maps
-
-                    <input
-                      name="link"
-                      type="url"
-                      placeholder="https://maps.google.com/..."
-                    />
-                  </label>
-
-                  <button
-                    className="save-button"
-                    type="submit"
-                    disabled={savingActivity}
-                  >
-                    {savingActivity
-                      ? 'Guardando...'
-                      : `Guardar ${currentSection.singular}`}
-                  </button>
-                </form>
-              )}
-
-              {activitiesError && (
-                <div className="auth-message error">
-                  <strong>
-                    Ha ocurrido un problema
-                  </strong>
-
-                  <p>{activitiesError}</p>
-                </div>
-              )}
-
-              {loadingActivities ? (
-                <article className="empty-card">
-                  <span>⏳</span>
-                  <h3>Cargando información...</h3>
-                </article>
-              ) : visibleActivities.length === 0 ? (
-                <article className="empty-card">
-                  <span>
-                    {currentSection.icon}
+                <article className="detail-card">
+                  <span className="detail-icon">
+                    🛏️
                   </span>
 
-                  <h3>
-                    {currentSection.emptyTitle}
-                  </h3>
+                  <div>
+                    <h3>
+                      Hotel en {selectedCity.name}
+                    </h3>
 
-                  <p>{currentSection.emptyText}</p>
+                    <p>{selectedCity.hotel}</p>
+                  </div>
                 </article>
-              ) : (
-                visibleActivities.map((activity) => {
-                  const priority = getPriority(
-                    activity.priority
-                  )
+              </section>
+            )}
 
-                  const categoryIcon =
-                    getCategoryIcon(
-                      activity.category,
-                      activity.item_type
+            {currentItemType && (
+              <section className="city-section">
+                <div className="section-heading">
+                  <div>
+                    <p className="section-label">
+                      {currentSection.label.toUpperCase()}
+                    </p>
+
+                    <p className="activity-summary">
+                      {pendingCount} pendientes ·{' '}
+                      {doneCount} hechos
+                    </p>
+                  </div>
+
+                  <button
+                    className="add-button"
+                    type="button"
+                    onClick={() =>
+                      setShowActivityForm(
+                        (current) => !current
+                      )
+                    }
+                  >
+                    {showActivityForm
+                      ? 'Cancelar'
+                      : '+ Añadir ' +
+                        currentSection.singular}
+                  </button>
+                </div>
+
+                <div className="activity-filters">
+                  <button
+                    className={
+                      activityFilter === 'all'
+                        ? 'selected'
+                        : ''
+                    }
+                    type="button"
+                    onClick={() =>
+                      setActivityFilter('all')
+                    }
+                  >
+                    Todos
+                  </button>
+
+                  <button
+                    className={
+                      activityFilter === 'pending'
+                        ? 'selected'
+                        : ''
+                    }
+                    type="button"
+                    onClick={() =>
+                      setActivityFilter('pending')
+                    }
+                  >
+                    Pendientes
+                  </button>
+
+                  <button
+                    className={
+                      activityFilter === 'done'
+                        ? 'selected'
+                        : ''
+                    }
+                    type="button"
+                    onClick={() =>
+                      setActivityFilter('done')
+                    }
+                  >
+                    Hechos
+                  </button>
+                </div>
+
+                {showActivityForm && (
+                  <form
+                    className="place-form"
+                    onSubmit={addActivity}
+                  >
+                    <label>
+                      Nombre
+
+                      <input
+                        name="name"
+                        type="text"
+                        placeholder={
+                          currentItemType === 'food'
+                            ? 'Ej. Ichiran Ramen'
+                            : 'Ej. Senso-ji'
+                        }
+                        required
+                      />
+                    </label>
+
+                    {selectedCityId === 'tokyo' && (
+                      <label>
+                        Barrio de Tokio
+
+                        <select name="neighborhood">
+                          <option value="">
+                            Seleccionar barrio
+                          </option>
+
+                          {tokyoNeighborhoods.map(
+                            (neighborhood) => (
+                              <option
+                                key={neighborhood}
+                                value={neighborhood}
+                              >
+                                {neighborhood}
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </label>
+                    )}
+
+                    <div className="form-grid">
+                      <label>
+                        Categoría
+
+                        <select name="category">
+                          <option value="">
+                            Sin categoría
+                          </option>
+
+                          {categoryOptions.map(
+                            (category) => (
+                              <option
+                                key={category}
+                                value={category}
+                              >
+                                {categoryIcons[category]}{' '}
+                                {category}
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </label>
+
+                      <label>
+                        Prioridad
+
+                        <select
+                          name="priority"
+                          defaultValue="medium"
+                        >
+                          {priorityOptions.map(
+                            (priority) => (
+                              <option
+                                key={priority.value}
+                                value={priority.value}
+                              >
+                                {priority.icon}{' '}
+                                {priority.label}
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </label>
+                    </div>
+
+                    <label>
+                      Duración estimada en minutos
+
+                      <input
+                        name="estimated_duration"
+                        type="number"
+                        min="1"
+                        placeholder="Ej. 90"
+                      />
+                    </label>
+
+                    <label>
+                      Descripción
+
+                      <textarea
+                        name="description"
+                        rows="3"
+                        placeholder="Qué quieres ver o recordar..."
+                      />
+                    </label>
+
+                    <label>
+                      Enlace de Google Maps
+
+                      <input
+                        name="link"
+                        type="url"
+                        placeholder="https://maps.google.com/..."
+                      />
+                    </label>
+
+                    <button
+                      className="save-button"
+                      type="submit"
+                      disabled={savingActivity}
+                    >
+                      {savingActivity
+                        ? 'Guardando...'
+                        : 'Guardar ' +
+                          currentSection.singular}
+                    </button>
+                  </form>
+                )}
+
+                {activitiesError && (
+                  <div className="auth-message error">
+                    <strong>
+                      Ha ocurrido un problema
+                    </strong>
+
+                    <p>{activitiesError}</p>
+                  </div>
+                )}
+
+                {loadingActivities && (
+                  <article className="empty-card">
+                    <span>⏳</span>
+                    <h3>Cargando información...</h3>
+                  </article>
+                )}
+
+                {!loadingActivities &&
+                  visibleActivities.length === 0 && (
+                    <article className="empty-card">
+                      <span>
+                        {currentSection.icon}
+                      </span>
+
+                      <h3>
+                        {currentSection.emptyTitle}
+                      </h3>
+
+                      <p>
+                        {currentSection.emptyText}
+                      </p>
+                    </article>
+                  )}
+
+                {!loadingActivities &&
+                  visibleActivities.map((activity) => {
+                    const priority = getPriority(
+                      activity.priority
                     )
 
-                  return (
-                    <article
-                      className={`activity-card ${
-                        activity.done
-                          ? 'activity-done'
-                          : ''
-                      }`}
-                      key={activity.id}
-                    >
-                      <div className="activity-leading">
-                        <span className="category-icon">
-                          {categoryIcon}
-                        </span>
+                    const categoryIcon =
+                      getCategoryIcon(
+                        activity.category,
+                        activity.item_type
+                      )
 
-                        <button
-                          className={`done-button ${
-                            activity.done
-                              ? 'selected'
-                              : ''
-                          }`}
-                          onClick={() =>
-                            toggleActivityDone(
-                              activity
-                            )
-                          }
-                          aria-label={
-                            activity.done
-                              ? `Marcar ${activity.name} como pendiente`
-                              : `Marcar ${activity.name} como hecho`
-                          }
-                        >
-                          {activity.done ? '✓' : ''}
-                        </button>
-                      </div>
-
-                      <div className="activity-information">
-                        <div className="activity-title-row">
-                          <h3>{activity.name}</h3>
-
-                          <span
-                            className={`priority-badge priority-${activity.priority}`}
-                          >
-                            {priority.icon}{' '}
-                            {priority.label}
+                    return (
+                      <article
+                        className={
+                          activity.done
+                            ? 'activity-card activity-done'
+                            : 'activity-card'
+                        }
+                        key={activity.id}
+                      >
+                        <div className="activity-leading">
+                          <span className="category-icon">
+                            {categoryIcon}
                           </span>
-                        </div>
 
-                        <div className="activity-metadata">
-                          {activity.neighborhood && (
-                            <span>
-                              📍{' '}
-                              {activity.neighborhood}
-                            </span>
-                          )}
-
-                          {activity.category && (
-                            <span>
-                              {categoryIcon}{' '}
-                              {activity.category}
-                            </span>
-                          )}
-
-                          {activity.estimated_duration && (
-                            <span>
-                              ⏱️{' '}
-                              {
-                                activity.estimated_duration
-                              }{' '}
-                              min
-                            </span>
-                          )}
-                        </div>
-
-                        {activity.description && (
-                          <p>
-                            {activity.description}
-                          </p>
-                        )}
-
-                        {activity.link && (
-                          <a
-                            href={activity.link}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            Abrir en Google Maps ↗
-                          </a>
-                        )}
-
-                        {activity.done && (
                           <button
-                            className="restore-button"
+                            className={
+                              activity.done
+                                ? 'done-button selected'
+                                : 'done-button'
+                            }
+                            type="button"
                             onClick={() =>
                               toggleActivityDone(
                                 activity
                               )
                             }
                           >
-                            Marcar como pendiente
+                            {activity.done ? '✓' : ''}
                           </button>
-                        )}
-                      </div>
+                        </div>
 
-                      <button
-                        className="delete-button"
-                        onClick={() =>
-                          deleteActivity(activity)
-                        }
-                        aria-label={`Eliminar ${activity.name}`}
-                      >
-                        ×
-                      </button>
-                    </article>
-                  )
-                })
-              )}
-            </section>
-          )}
-        </section>
-      )}
+                        <div className="activity-information">
+                          <div className="activity-title-row">
+                            <h3>{activity.name}</h3>
+
+                            <span
+                              className={
+                                'priority-badge priority-' +
+                                activity.priority
+                              }
+                            >
+                              {priority.icon}{' '}
+                              {priority.label}
+                            </span>
+                          </div>
+
+                          <div className="activity-metadata">
+                            {activity.neighborhood && (
+                              <span>
+                                📍{' '}
+                                {activity.neighborhood}
+                              </span>
+                            )}
+
+                            {activity.category && (
+                              <span>
+                                {categoryIcon}{' '}
+                                {activity.category}
+                              </span>
+                            )}
+
+                            {activity.estimated_duration && (
+                              <span>
+                                ⏱️{' '}
+                                {
+                                  activity.estimated_duration
+                                }{' '}
+                                min
+                              </span>
+                            )}
+                          </div>
+
+                          {activity.description && (
+                            <p>
+                              {activity.description}
+                            </p>
+                          )}
+
+                          {activity.link && (
+                            <a
+                              href={activity.link}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Abrir en Google Maps ↗
+                            </a>
+                          )}
+
+                          {activity.done && (
+                            <button
+                              className="restore-button"
+                              type="button"
+                              onClick={() =>
+                                toggleActivityDone(
+                                  activity
+                                )
+                              }
+                            >
+                              Marcar como pendiente
+                            </button>
+                          )}
+                        </div>
+
+                        <button
+                          className="delete-button"
+                          type="button"
+                          onClick={() =>
+                            deleteActivity(activity)
+                          }
+                          aria-label={
+                            'Eliminar ' + activity.name
+                          }
+                        >
+                          ×
+                        </button>
+                      </article>
+                    )
+                  })}
+              </section>
+            )}
+          </section>
+        )}
     </main>
   )
 }

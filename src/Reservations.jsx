@@ -132,82 +132,65 @@ function Reservations({
     }
   }, [hotels, transports])
 
-  const visibleTransports = useMemo(() => {
-    return transports
-      .filter((transport) => {
+  const visibleHotels = useMemo(() => {
+    return [...hotels]
+      .filter((hotel) => {
         if (
           reservationFilter === 'pending'
         ) {
           return (
-            !transport.reserved ||
-            !transport.paid
+            !hotel.reserved ||
+            !hotel.paid
           )
         }
-  
+
         if (
-          reservationFilter === 'completed'
+          reservationFilter ===
+          'completed'
         ) {
           return (
-            transport.reserved &&
-            transport.paid
+            hotel.reserved &&
+            hotel.paid
           )
         }
-  
+
         return true
       })
       .sort((first, second) => {
-        const firstDay = days.find(
-          (day) => day.id === first.day_id
-        )
-  
-        const secondDay = days.find(
-          (day) => day.id === second.day_id
-        )
-  
-        const firstDayNumber = Number(
-          firstDay?.day_number ?? 999
-        )
-  
-        const secondDayNumber = Number(
-          secondDay?.day_number ?? 999
-        )
-  
-        if (
-          firstDayNumber !== secondDayNumber
-        ) {
-          return (
-            firstDayNumber -
-            secondDayNumber
+        const firstDate =
+          first.check_in_date ||
+          '9999-12-31'
+
+        const secondDate =
+          second.check_in_date ||
+          '9999-12-31'
+
+        if (firstDate !== secondDate) {
+          return firstDate.localeCompare(
+            secondDate
           )
         }
-  
-        const firstTime =
-          first.start_time || '99:99:99'
-  
-        const secondTime =
-          second.start_time || '99:99:99'
-  
-        if (firstTime !== secondTime) {
-          return firstTime.localeCompare(
-            secondTime
-          )
-        }
-  
-        return (
-          Number(first.position || 0) -
-          Number(second.position || 0)
+
+        return first.name.localeCompare(
+          second.name,
+          'es',
+          {
+            sensitivity: 'base',
+          }
         )
       })
-  }, [
-    transports,
-    reservationFilter,
-    days,
-  ])
   }, [hotels, reservationFilter])
 
   const visibleTransports = useMemo(() => {
-    return transports.filter(
-      (transport) => {
+    const daysById = new Map(
+      days.map((currentDay) => [
+        String(currentDay.id),
+        currentDay,
+      ])
+    )
+
+    return [...transports]
+      .filter((transport) => {
         if (
           reservationFilter === 'pending'
         ) {
@@ -228,9 +211,59 @@ function Reservations({
         }
 
         return true
-      }
-    )
-  }, [transports, reservationFilter])
+      })
+      .sort((first, second) => {
+        const firstDay = daysById.get(
+          String(first.day_id)
+        )
+
+        const secondDay = daysById.get(
+          String(second.day_id)
+        )
+
+        const firstDayNumber = Number(
+          firstDay?.day_number ?? 999
+        )
+
+        const secondDayNumber = Number(
+          secondDay?.day_number ?? 999
+        )
+
+        if (
+          firstDayNumber !==
+          secondDayNumber
+        ) {
+          return (
+            firstDayNumber -
+            secondDayNumber
+          )
+        }
+
+        const firstTime =
+          first.start_time || '99:99:99'
+
+        const secondTime =
+          second.start_time || '99:99:99'
+
+        const timeComparison =
+          firstTime.localeCompare(
+            secondTime
+          )
+
+        if (timeComparison !== 0) {
+          return timeComparison
+        }
+
+        return (
+          Number(first.position || 0) -
+          Number(second.position || 0)
+        )
+      })
+  }, [
+    transports,
+    reservationFilter,
+    days,
+  ])
 
   async function loadReservations() {
     setLoading(true)
@@ -252,11 +285,7 @@ function Reservations({
       supabase
         .from('itinerary_items')
         .select('*')
-        .eq('item_type', 'transport')
-        .order('start_time', {
-          ascending: true,
-          nullsFirst: false,
-        }),
+        .eq('item_type', 'transport'),
 
       supabase
         .from('itinerary_days')
@@ -312,7 +341,9 @@ function Reservations({
     }
 
     if (errors.length > 0) {
-      setErrorMessage(errors.join(' '))
+      setErrorMessage(
+        errors.join(' ')
+      )
     }
 
     setLoading(false)
@@ -321,7 +352,9 @@ function Reservations({
   function getDay(dayId) {
     return (
       days.find(
-        (day) => day.id === dayId
+        (day) =>
+          String(day.id) ===
+          String(dayId)
       ) || null
     )
   }
@@ -381,7 +414,10 @@ function Reservations({
     }
 
     const updateKey =
-      'hotel-' + hotel.id + '-' + field
+      'hotel-' +
+      hotel.id +
+      '-' +
+      field
 
     setUpdatingKey(updateKey)
     setErrorMessage('')
@@ -503,10 +539,13 @@ function Reservations({
         <article className="reservations-loading">
           <span>⏳</span>
 
-          <h2>Cargando reservas...</h2>
+          <h2>
+            Cargando reservas...
+          </h2>
 
           <p>
-            Recuperando hoteles y transportes.
+            Recuperando hoteles y
+            transportes.
           </p>
         </article>
       </section>
@@ -524,8 +563,8 @@ function Reservations({
           <h2>Reservas</h2>
 
           <p>
-            Comprueba hoteles, transportes y
-            pagos pendientes.
+            Comprueba hoteles, transportes
+            y pagos pendientes.
           </p>
         </div>
 
@@ -565,7 +604,9 @@ function Reservations({
             </strong>
 
             <small>
-              {summary.hotelPaymentPending}{' '}
+              {
+                summary.hotelPaymentPending
+              }{' '}
               pendientes de pago
             </small>
           </div>
@@ -611,7 +652,9 @@ function Reservations({
             </strong>
 
             <small>
-              {summary.totalPaymentPending}{' '}
+              {
+                summary.totalPaymentPending
+              }{' '}
               pagos pendientes
             </small>
           </div>
@@ -627,7 +670,9 @@ function Reservations({
           }
           type="button"
           onClick={() =>
-            setReservationFilter('pending')
+            setReservationFilter(
+              'pending'
+            )
           }
         >
           Pendientes
@@ -686,12 +731,13 @@ function Reservations({
 
             <div>
               <h4>
-                No hay hoteles en este filtro
+                No hay hoteles en este
+                filtro
               </h4>
 
               <p>
-                Cambia el filtro o añade hoteles
-                desde Ciudades.
+                Cambia el filtro o añade
+                hoteles desde Ciudades.
               </p>
             </div>
           </article>
@@ -713,14 +759,18 @@ function Reservations({
                 )
 
               const isUpdating =
-                updatingKey?.startsWith(
-                  'hotel-' + hotel.id
+                Boolean(
+                  updatingKey?.startsWith(
+                    'hotel-' + hotel.id
+                  )
                 )
 
               return (
                 <article
                   className="reservation-item"
-                  key={'hotel-' + hotel.id}
+                  key={
+                    'hotel-' + hotel.id
+                  }
                 >
                   <span className="reservation-item-icon">
                     🏨
@@ -857,12 +907,14 @@ function Reservations({
 
             <div>
               <h4>
-                No hay transportes en este filtro
+                No hay transportes en este
+                filtro
               </h4>
 
               <p>
-                Los transportes se añaden desde
-                los días del itinerario.
+                Los transportes se añaden
+                desde los días del
+                itinerario.
               </p>
             </div>
           </article>
@@ -870,12 +922,13 @@ function Reservations({
           <div className="reservation-list">
             {visibleTransports.map(
               (transport) => {
-                const day = getDay(
-                  transport.day_id
-                )
+                const currentDay =
+                  getDay(
+                    transport.day_id
+                  )
 
                 const city = getCity(
-                  day?.city
+                  currentDay?.city
                 )
 
                 const startTime =
@@ -883,10 +936,17 @@ function Reservations({
                     transport.start_time
                   )
 
+                const endTime =
+                  formatTime(
+                    transport.end_time
+                  )
+
                 const isUpdating =
-                  updatingKey?.startsWith(
-                    'transport-' +
-                      transport.id
+                  Boolean(
+                    updatingKey?.startsWith(
+                      'transport-' +
+                        transport.id
+                    )
                   )
 
                 return (
@@ -905,9 +965,9 @@ function Reservations({
                       <div className="reservation-item-heading">
                         <div>
                           <span>
-                            {day
+                            {currentDay
                               ? 'Día ' +
-                                day.day_number +
+                                currentDay.day_number +
                                 ' · ' +
                                 city.emoji +
                                 ' ' +
@@ -923,7 +983,7 @@ function Reservations({
                         <button
                           className="reservation-open-button"
                           type="button"
-                          disabled={!day}
+                          disabled={!currentDay}
                           onClick={() =>
                             openTransportDay(
                               transport
@@ -935,10 +995,17 @@ function Reservations({
                       </div>
 
                       {(startTime ||
+                        endTime ||
                         transport.description) && (
                         <p className="reservation-item-detail">
                           {startTime || ''}
                           {startTime &&
+                          endTime
+                            ? ' → '
+                            : ''}
+                          {endTime || ''}
+                          {(startTime ||
+                            endTime) &&
                           transport.description
                             ? ' · '
                             : ''}

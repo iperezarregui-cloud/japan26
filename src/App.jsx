@@ -3,9 +3,9 @@ import './App.css'
 import Auth from './Auth'
 import { supabase } from './supabase'
 
-const initialCities = [
+const cities = [
   {
-    id: 1,
+    id: 'tokyo',
     emoji: '🗼',
     name: 'Tokio',
     days: 'Días 1–4',
@@ -16,17 +16,9 @@ const initialCities = [
       'Visitar Meiji Jingu',
       'Explorar Asakusa',
     ],
-    places: [
-      {
-        id: 101,
-        name: 'Meiji Jingu',
-        description: 'Santuario rodeado por un gran bosque.',
-        link: '',
-      },
-    ],
   },
   {
-    id: 2,
+    id: 'kyoto',
     emoji: '⛩️',
     name: 'Kioto',
     days: 'Días 5–8',
@@ -37,17 +29,9 @@ const initialCities = [
       'Pasear por Gion',
       'Visitar Kiyomizu-dera',
     ],
-    places: [
-      {
-        id: 201,
-        name: 'Fushimi Inari',
-        description: 'Santuario conocido por sus miles de torii.',
-        link: '',
-      },
-    ],
   },
   {
-    id: 3,
+    id: 'osaka',
     emoji: '🏯',
     name: 'Osaka',
     days: 'Días 9–11',
@@ -58,36 +42,29 @@ const initialCities = [
       'Cenar en Dotonbori',
       'Explorar Shinsekai',
     ],
-    places: [],
   },
 ]
-
-function loadCities() {
-  try {
-    const storedCities = localStorage.getItem('japan26-cities')
-
-    if (storedCities) {
-      return JSON.parse(storedCities)
-    }
-
-    return initialCities
-  } catch {
-    return initialCities
-  }
-}
 
 function App() {
   const [session, setSession] = useState(null)
   const [checkingSession, setCheckingSession] = useState(true)
 
   const [activeTab, setActiveTab] = useState('itinerary')
-  const [cities, setCities] = useState(loadCities)
   const [selectedCityId, setSelectedCityId] = useState(null)
   const [citySection, setCitySection] = useState('hotel')
+
+  const [places, setPlaces] = useState([])
+  const [loadingPlaces, setLoadingPlaces] = useState(false)
+  const [placesError, setPlacesError] = useState('')
   const [showPlaceForm, setShowPlaceForm] = useState(false)
+  const [savingPlace, setSavingPlace] = useState(false)
 
   const selectedCity = cities.find(
     (city) => city.id === selectedCityId
+  )
+
+  const selectedCityPlaces = places.filter(
+    (place) => place.city === selectedCityId
   )
 
   useEffect(() => {
@@ -117,11 +94,34 @@ function App() {
   }, [])
 
   useEffect(() => {
-    localStorage.setItem(
-      'japan26-cities',
-      JSON.stringify(cities)
-    )
-  }, [cities])
+    if (session) {
+      loadPlaces()
+    } else {
+      setPlaces([])
+    }
+  }, [session])
+
+  async function loadPlaces() {
+    setLoadingPlaces(true)
+    setPlacesError('')
+
+    const { data, error } = await supabase
+      .from('places')
+      .select('*')
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      console.error('Error al cargar lugares:', error)
+
+      setPlacesError(
+        'No se pudieron cargar los lugares. Comprueba la conexión e inténtalo de nuevo.'
+      )
+    } else {
+      setPlaces(data ?? [])
+    }
+
+    setLoadingPlaces(false)
+  }
 
   async function handleLogout() {
     const shouldLogout = window.confirm(
@@ -140,61 +140,83 @@ function App() {
     setSelectedCityId(null)
     setCitySection('hotel')
     setShowPlaceForm(false)
+    setPlacesError('')
   }
 
   function openCity(cityId) {
     setSelectedCityId(cityId)
     setCitySection('hotel')
     setShowPlaceForm(false)
+    setPlacesError('')
   }
 
   function goBackToCities() {
     setSelectedCityId(null)
     setCitySection('hotel')
     setShowPlaceForm(false)
+    setPlacesError('')
   }
 
   function changeCitySection(section) {
     setCitySection(section)
     setShowPlaceForm(false)
+    setPlacesError('')
   }
 
-  function addPlace(event) {
+  async function addPlace(event) {
     event.preventDefault()
 
-    const formData = new FormData(event.currentTarget)
+    if (!selectedCityId || savingPlace) {
+      return
+    }
 
-    const name = formData.get('name').trim()
-    const description = formData.get('description').trim()
-    const link = formData.get('link').trim()
+    const form = event.currentTarget
+    const formData = new FormData(form)
+
+    const name = String(formData.get('name') || '').trim()
+    const description = String(
+      formData.get('description') || ''
+    ).trim()
+    const link = String(formData.get('link') || '').trim()
 
     if (!name) {
       return
     }
 
-    const newPlace = {
-      id: Date.now(),
-      name,
-      description,
-      link,
+    setSavingPlace(true)
+    setPlacesError('')
+
+    const { data, error } = await supabase
+      .from('places')
+      .insert({
+        city: selectedCityId,
+        name,
+        description,
+        link,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error al guardar el lugar:', error)
+
+      setPlacesError(
+        'No se pudo guardar el lugar. Inténtalo de nuevo.'
+      )
+    } else {
+      setPlaces((currentPlaces) => [
+        ...currentPlaces,
+        data,
+      ])
+
+      form.reset()
+      setShowPlaceForm(false)
     }
 
-    setCities((currentCities) =>
-      currentCities.map((city) =>
-        city.id === selectedCityId
-          ? {
-              ...city,
-              places: [...city.places, newPlace],
-            }
-          : city
-      )
-    )
-
-    event.currentTarget.reset()
-    setShowPlaceForm(false)
+    setSavingPlace(false)
   }
 
-  function deletePlace(placeId) {
+  async function deletePlace(placeId) {
     const shouldDelete = window.confirm(
       '¿Quieres eliminar este lugar?'
     )
@@ -203,16 +225,26 @@ function App() {
       return
     }
 
-    setCities((currentCities) =>
-      currentCities.map((city) =>
-        city.id === selectedCityId
-          ? {
-              ...city,
-              places: city.places.filter(
-                (place) => place.id !== placeId
-              ),
-            }
-          : city
+    setPlacesError('')
+
+    const { error } = await supabase
+      .from('places')
+      .delete()
+      .eq('id', placeId)
+
+    if (error) {
+      console.error('Error al eliminar el lugar:', error)
+
+      setPlacesError(
+        'No se pudo eliminar el lugar. Inténtalo de nuevo.'
+      )
+
+      return
+    }
+
+    setPlaces((currentPlaces) =>
+      currentPlaces.filter(
+        (place) => place.id !== placeId
       )
     )
   }
@@ -474,6 +506,7 @@ function App() {
                 >
                   <label>
                     Nombre del lugar
+
                     <input
                       name="name"
                       type="text"
@@ -484,6 +517,7 @@ function App() {
 
                   <label>
                     Descripción
+
                     <textarea
                       name="description"
                       placeholder="Qué quieres ver o recordar..."
@@ -493,6 +527,7 @@ function App() {
 
                   <label>
                     Enlace de Google Maps
+
                     <input
                       name="link"
                       type="url"
@@ -503,13 +538,31 @@ function App() {
                   <button
                     className="save-button"
                     type="submit"
+                    disabled={savingPlace}
                   >
-                    Guardar lugar
+                    {savingPlace
+                      ? 'Guardando...'
+                      : 'Guardar lugar'}
                   </button>
                 </form>
               )}
 
-              {selectedCity.places.length === 0 ? (
+              {placesError && (
+                <div className="auth-message error">
+                  <strong>Ha ocurrido un problema</strong>
+                  <p>{placesError}</p>
+                </div>
+              )}
+
+              {loadingPlaces ? (
+                <article className="empty-card">
+                  <span>⏳</span>
+                  <h3>Cargando lugares...</h3>
+                  <p>
+                    Estamos consultando la información del viaje.
+                  </p>
+                </article>
+              ) : selectedCityPlaces.length === 0 ? (
                 <article className="empty-card">
                   <span>📍</span>
 
@@ -522,7 +575,7 @@ function App() {
                   </p>
                 </article>
               ) : (
-                selectedCity.places.map((place) => (
+                selectedCityPlaces.map((place) => (
                   <article
                     className="place-card"
                     key={place.id}

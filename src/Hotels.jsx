@@ -228,6 +228,9 @@ function Hotels({ cityId, cityName }) {
       address: String(
         formData.get('address') || ''
       ).trim(),
+      maps_name: String(
+        formData.get('maps_name') || ''
+      ).trim(),
       maps_link: String(
         formData.get('maps_link') || ''
       ).trim(),
@@ -637,6 +640,22 @@ function Hotels({ cityId, cityName }) {
                   : ''
               }
               placeholder="Código o referencia de la reserva"
+            />
+          </label>
+
+          <label>
+            Nombre exacto en Google Maps
+
+            <input
+              name="maps_name"
+              type="text"
+              defaultValue={
+                editingHotel
+                  ? editingHotel.maps_name || ''
+                  : ''
+              }
+              placeholder="Ej. Hotel Gracery Shinjuku"
+              required
             />
           </label>
 

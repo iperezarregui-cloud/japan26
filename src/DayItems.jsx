@@ -163,6 +163,8 @@ function formatTime(time) {
 function DayItems({ day }) {
   const [items, setItems] = useState([])
   const [activities, setActivities] = useState([])
+  const [hotels, setHotels] = useState([])
+  const [selectedHotel, setSelectedHotel] = useState(null)
   const [itineraryDays, setItineraryDays] =
     useState([])
 
@@ -326,6 +328,7 @@ function DayItems({ day }) {
     const [
       itemsResult,
       activitiesResult,
+      hotelsResult,
       daysResult,
     ] = await Promise.all([
       supabase
@@ -347,6 +350,13 @@ function DayItems({ day }) {
           ascending: true,
         }),
 
+      supabase
+        .from('hotels')
+        .select('*')
+        .order('check_in_date', {
+          ascending: true,
+          nullsFirst: false,
+        }),
       supabase
         .from('itinerary_days')
         .select(
@@ -387,6 +397,17 @@ function DayItems({ day }) {
       )
     }
 
+    if (hotelsResult.error) {
+      console.error(
+        'Error al cargar los hoteles:',
+        hotelsResult.error
+      )
+      errors.push(
+        'No se pudieron cargar los hoteles.'
+      )
+    } else {
+      setHotels(hotelsResult.data || [])
+    }
     if (daysResult.error) {
       console.error(
         'Error al cargar los días:',
@@ -650,6 +671,7 @@ function DayItems({ day }) {
             ''
         ).trim(),
         link: activity.link || '',
+        maps_name: activity.maps_name || '',
         reserved: false,
         paid: false,
         position: items.length,
@@ -685,6 +707,9 @@ function DayItems({ day }) {
         ).trim(),
         link: String(
           formData.get('link') || ''
+        ).trim(),
+        maps_name: String(
+          formData.get('maps_name') || ''
         ).trim(),
         position: items.length,
         reserved: false,
@@ -792,6 +817,7 @@ function DayItems({ day }) {
             ''
         ).trim(),
         link: activity.link || '',
+        maps_name: activity.maps_name || '',
         reserved: false,
         paid: false,
       }
@@ -828,6 +854,9 @@ function DayItems({ day }) {
         ).trim(),
         link: String(
           formData.get('link') || ''
+        ).trim(),
+        maps_name: String(
+          formData.get('maps_name') || ''
         ).trim(),
       }
 
@@ -1263,6 +1292,108 @@ function DayItems({ day }) {
     editingUntimedIndex <
       itemsWithoutTime.length - 1
 
+  function getHotelForNight(dateValue) {
+    if (!dateValue) {
+      return null
+    }
+
+    return (
+      hotels.find(
+        (hotel) =>
+          hotel.check_in_date &&
+          hotel.check_out_date &&
+          hotel.check_in_date <= dateValue &&
+          hotel.check_out_date > dateValue
+      ) || null
+    )
+  }
+
+  function getPreviousDate(dateValue) {
+    if (!dateValue) {
+      return null
+    }
+
+    const date = new Date(dateValue + 'T12:00:00')
+    date.setDate(date.getDate() - 1)
+    return date.toISOString().slice(0, 10)
+  }
+
+  const nightHotel = getHotelForNight(
+    day.travel_date
+  )
+
+  const previousNightHotel = getHotelForNight(
+    getPreviousDate(day.travel_date)
+  )
+
+  function openDayRoute() {
+    const routePoints = []
+
+    if (previousNightHotel?.maps_name) {
+      routePoints.push(previousNightHotel.maps_name)
+    }
+
+    sortedItems.forEach((item) => {
+      const linkedActivity = getLinkedActivity(
+        item.activity_id
+      )
+
+      const mapsName = linkedActivity
+        ? linkedActivity.maps_name
+        : item.maps_name
+
+      if (mapsName) {
+        routePoints.push(mapsName)
+      }
+    })
+
+    if (nightHotel?.maps_name) {
+      routePoints.push(nightHotel.maps_name)
+    }
+
+    const cleanPoints = routePoints
+      .map((point) => String(point).trim())
+      .filter(Boolean)
+
+    if (cleanPoints.length === 0) {
+      setErrorMessage(
+        'No hay puntos con nombre de Google Maps para crear la ruta.'
+      )
+      return
+    }
+
+    if (cleanPoints.length === 1) {
+      const searchUrl =
+        'https://www.google.com/maps/search/?api=1&query=' +
+        encodeURIComponent(cleanPoints[0])
+
+      openExternalLink(searchUrl)
+      return
+    }
+
+    const origin = cleanPoints[0]
+    const destination =
+      cleanPoints[cleanPoints.length - 1]
+    const waypoints = cleanPoints.slice(1, -1)
+
+    let routeUrl =
+      'https://www.google.com/maps/dir/?api=1' +
+      '&origin=' + encodeURIComponent(origin) +
+      '&destination=' +
+      encodeURIComponent(destination) +
+      '&travelmode=walking'
+
+    if (waypoints.length > 0) {
+      routeUrl +=
+        '&waypoints=' +
+        waypoints
+          .map((point) => encodeURIComponent(point))
+          .join('%7C')
+    }
+
+    openExternalLink(routeUrl)
+  }
+
   if (loadingItems) {
     return (
       <div className="manual-items-loading">
@@ -1586,6 +1717,16 @@ function DayItems({ day }) {
               </label>
 
               <label>
+                Nombre exacto en Google Maps
+
+                <input
+                  name="maps_name"
+                  type="text"
+                  placeholder="Ej. Haneda Airport Terminal 3"
+                />
+              </label>
+
+              <label>
                 Enlace opcional
 
                 <input
@@ -1629,6 +1770,31 @@ function DayItems({ day }) {
         </form>
       )}
 
+      <div className="day-route-section">
+        {nightHotel && (
+          <button
+            className="night-hotel-card"
+            type="button"
+            onClick={() => setSelectedHotel(nightHotel)}
+          >
+            <span aria-hidden="true">🏨</span>
+            <span>
+              <small>NOCHE EN</small>
+              <strong>{nightHotel.name}</strong>
+            </span>
+            <span aria-hidden="true">›</span>
+          </button>
+        )}
+
+        <button
+          className="day-route-button"
+          type="button"
+          onClick={openDayRoute}
+        >
+          🗺️ Ruta del día
+        </button>
+      </div>
+
       {!showNewItemForm && (
         <button
           className="secondary-action-button active"
@@ -1637,6 +1803,84 @@ function DayItems({ day }) {
         >
           + Añadir al día
         </button>
+      )}
+
+      {selectedHotel && (
+        <div
+          className="compact-panel-backdrop"
+          role="presentation"
+          onClick={() => setSelectedHotel(null)}
+        >
+          <article
+            className="compact-panel hotel-itinerary-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="hotel-itinerary-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              className="compact-panel-close"
+              type="button"
+              onClick={() => setSelectedHotel(null)}
+              aria-label="Cerrar hotel"
+            >
+              ×
+            </button>
+
+            <span className="compact-panel-icon">🏨</span>
+            <p className="section-label">NOCHE EN</p>
+            <h2 id="hotel-itinerary-title">
+              {selectedHotel.name}
+            </h2>
+
+            {selectedHotel.address && (
+              <div className="compact-panel-section">
+                <span>DIRECCIÓN</span>
+                <p>{selectedHotel.address}</p>
+              </div>
+            )}
+
+            {selectedHotel.confirmation_number && (
+              <div className="compact-panel-section">
+                <span>CONFIRMACIÓN</span>
+                <p>{selectedHotel.confirmation_number}</p>
+              </div>
+            )}
+
+            {selectedHotel.notes && (
+              <div className="compact-panel-section">
+                <span>NOTAS</span>
+                <p>{selectedHotel.notes}</p>
+              </div>
+            )}
+
+            <div className="hotel-itinerary-links">
+              {selectedHotel.maps_link && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    openExternalLink(selectedHotel.maps_link)
+                  }
+                >
+                  🗺️ Google Maps
+                </button>
+              )}
+
+              {selectedHotel.booking_link && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    openExternalLink(
+                      selectedHotel.booking_link
+                    )
+                  }
+                >
+                  Abrir reserva
+                </button>
+              )}
+            </div>
+          </article>
+        </div>
       )}
 
       {informationItem && (
@@ -1976,6 +2220,18 @@ function DayItems({ day }) {
                       defaultValue={
                         editingItem.description ||
                         ''
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    Nombre exacto en Google Maps
+
+                    <input
+                      name="maps_name"
+                      type="text"
+                      defaultValue={
+                        editingItem.maps_name || ''
                       }
                     />
                   </label>

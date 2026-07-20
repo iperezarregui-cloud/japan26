@@ -763,6 +763,9 @@ const [
       link: String(
         formData.get('link') || ''
       ).trim(),
+      maps_name: String(
+        formData.get('maps_name') || ''
+      ).trim(),
       tiktok_link: String(
         formData.get('tiktok_link') || ''
       ).trim(),
@@ -1397,6 +1400,20 @@ const [
                             ?.description || ''
                         }
                         placeholder="Qué quieres ver o recordar..."
+                      />
+                    </label>
+
+                    <label>
+                      Nombre exacto en Google Maps
+
+                      <input
+                        name="maps_name"
+                        type="text"
+                        defaultValue={
+                          editingActivity?.maps_name || ''
+                        }
+                        placeholder="Ej. Omoide Yokocho"
+                        required
                       />
                     </label>
 

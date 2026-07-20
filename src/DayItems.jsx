@@ -1564,26 +1564,53 @@ function DayItems({ day }) {
     const selectedDayIds = new Set(
       selectedDays.map((selectedDay) => selectedDay.id)
     )
-    const assignedActivityIds = new Set(
-      allItineraryItems
-        .filter((item) => item.activity_id)
-        .map((item) => Number(item.activity_id))
+    const previousDays = orderedDays.filter(
+      (itineraryDay, index) => index < currentIndex
+    )
+    const previousDayIds = new Set(
+      previousDays.map((previousDay) => previousDay.id)
+    )
+    const futureDayIds = new Set(
+      orderedDays
+        .filter((itineraryDay, index) => index > currentIndex)
+        .map((futureDay) => futureDay.id)
     )
     const selectedAssignments = allItineraryItems.filter(
       (item) => selectedDayIds.has(item.day_id)
+    )
+    const previousItineraryItems = allItineraryItems.filter(
+      (item) => previousDayIds.has(item.day_id)
+    )
+    const futureItineraryItems = allItineraryItems.filter(
+      (item) => futureDayIds.has(item.day_id)
+    )
+    const previousActivityIds = new Set(
+      previousItineraryItems
+        .filter((item) => item.activity_id)
+        .map((item) => Number(item.activity_id))
+    )
+    const futureActivityIds = new Set(
+      futureItineraryItems
+        .filter((item) => item.activity_id)
+        .map((item) => Number(item.activity_id))
     )
     const cityActivities = activities.filter(
       (activity) => activity.city === day.city
     )
     const completed = cityActivities.filter(
-      (activity) => activity.done
+      (activity) =>
+        activity.done ||
+        previousActivityIds.has(Number(activity.id))
+    )
+    const completedIds = new Set(
+      completed.map((activity) => Number(activity.id))
     )
     const pending = cityActivities.filter(
-      (activity) => !activity.done
+      (activity) => !completedIds.has(Number(activity.id))
     )
     const assignedElsewhere = pending.filter(
       (activity) =>
-        assignedActivityIds.has(Number(activity.id)) &&
+        futureActivityIds.has(Number(activity.id)) &&
         !selectedAssignments.some(
           (item) => Number(item.activity_id) === Number(activity.id)
         )
@@ -1591,6 +1618,37 @@ function DayItems({ day }) {
     const available = pending.filter(
       (activity) => !assignedElsewhere.includes(activity)
     )
+    const previousExternalPlaces = previousItineraryItems
+      .filter(
+        (item) =>
+          !item.activity_id &&
+          item.item_type !== 'transport' &&
+          item.item_type !== 'note' &&
+          item.item_type !== 'free_time' &&
+          (item.maps_name || item.title)
+      )
+      .map((item) => {
+        const previousDay = previousDays.find(
+          (candidate) => candidate.id === item.day_id
+        )
+        return {
+          title: item.title || item.maps_name,
+          mapsName: item.maps_name || '',
+          dayNumber: previousDay?.day_number || '?',
+        }
+      })
+      .filter(
+        (place, index, places) =>
+          places.findIndex(
+            (candidate) =>
+              String(candidate.mapsName || candidate.title)
+                .trim()
+                .toLowerCase() ===
+              String(place.mapsName || place.title)
+                .trim()
+                .toLowerCase()
+          ) === index
+      )
     const city = getCity(day.city)
     const nights = selectedDays
       .map((selectedDay) => {
@@ -1630,10 +1688,22 @@ function DayItems({ day }) {
         ? '- Indicaciones adicionales: ' + promptNotes.trim()
         : '',
       '',
-      'ACTIVIDADES YA COMPLETADAS',
+      'LUGARES YA VISITADOS SEGÚN EL ITINERARIO ANTERIOR',
       completed.length
         ? completed.map(formatPromptActivity).join('\n')
-        : '- Ninguna registrada',
+        : '- Ninguna actividad vinculada registrada',
+      previousExternalPlaces.length
+        ? previousExternalPlaces
+            .map(
+              (place) =>
+                '- ' + place.title +
+                ' (Día ' + place.dayNumber + ')' +
+                (place.mapsName
+                  ? '\n  Google Maps: ' + place.mapsName
+                  : '')
+            )
+            .join('\n')
+        : '- Ningún establecimiento externo registrado en días anteriores',
       '',
       'ACTIVIDADES PENDIENTES DISPONIBLES',
       available.length
@@ -1679,28 +1749,29 @@ function DayItems({ day }) {
       '',
       'INSTRUCCIONES',
       '1. Usa solo las actividades disponibles como base del plan.',
-      '2. No repitas actividades completadas ni asignadas a otros días.',
-      '3. Prioriza una zona principal por día.',
-      '4. Combina como máximo dos o tres barrios, y solo cuando sean contiguos o formen un recorrido natural.',
-      '5. Evita mezclar zonas alejadas solo para rellenar horas.',
-      '6. En Tokio, evita combinar la zona este, como Asakusa, Ueno o Akihabara, con la zona oeste, como Shibuya, Harajuku o Shinjuku, salvo que exista un motivo excepcional y lo expliques.',
-      '7. Es preferible proponer un día corto de 4 o 5 horas que una jornada geográficamente dispersa.',
-      '8. Ten en cuenta cuántos días quedan en la ciudad. Si aún hay días suficientes, deja las actividades de otras zonas para esos días en lugar de incluirlas ahora.',
-      '9. Distribuye la carga entre los días seleccionados y evita agotar en un solo día actividades que encajan mejor en jornadas posteriores.',
-      '10. Antes de cerrar el plan, revisa expresamente si estás metiendo actividades redundantes o zonas que sería mejor reservar para días posteriores.',
-      '11. Prioriza Imprescindible y Alta, pero no uses la prioridad como excusa para romper la coherencia geográfica.',
-      '12. Integra cafés, cerveza, comida, cena y copas según nuestro ritmo y cerca del recorrido.',
-      '13. Ordena las paradas de forma práctica y caminable cuando sea posible.',
-      '14. Incluye siempre cada desplazamiento entre paradas como una línea propia del itinerario, indicando el medio recomendado y un tiempo estimado realista.',
-      '15. Para cada trayecto especifica una opción concreta, por ejemplo: 15 min andando, 12 min en metro más 5 min andando, 20 min en tren o 10 min en taxi.',
-      '16. Añade margen razonable para entrar y salir de estaciones, esperas, transbordos, orientación y pequeños retrasos. No uses solo el tiempo puro del tren.',
-      '17. Prioriza caminar cuando el trayecto sea agradable y razonable; usa metro o tren cuando reduzca claramente el tiempo o el cansancio.',
-      '18. Si no puedes verificar una duración exacta, da una estimación prudente y márcala como aproximada.',
-      '19. Los tiempos de traslado deben contar dentro de la duración total del día y pueden justificar eliminar o mover actividades.',
-      '20. Si alguna opción encaja mejor en otro día restante, déjala fuera del plan principal e indica en qué día o zona la colocarías.',
-      '21. Si faltan actividades para completar la jornada, conserva tiempo libre. No cruces la ciudad para rellenar horas.',
-      '22. No inventes lugares salvo en una sección opcional separada, y no los añadas al itinerario principal.',
-      '23. Señala horarios, reservas o cierres que deban comprobarse.',
+      '2. Considera realizados todos los lugares que aparecen en días anteriores del itinerario y no los vuelvas a proponer. Esto incluye actividades vinculadas y establecimientos externos con nombre o Google Maps.',
+      '3. Si una actividad no realizada fue eliminada del itinerario anterior, vuelve a tratarla como pendiente y disponible.',
+      '4. Prioriza una zona principal por día.',
+      '5. Combina como máximo dos o tres barrios, y solo cuando sean contiguos o formen un recorrido natural.',
+      '6. Evita mezclar zonas alejadas solo para rellenar horas.',
+      '7. En Tokio, evita combinar la zona este, como Asakusa, Ueno o Akihabara, con la zona oeste, como Shibuya, Harajuku o Shinjuku, salvo que exista un motivo excepcional y lo expliques.',
+      '8. Es preferible proponer un día corto de 4 o 5 horas que una jornada geográficamente dispersa.',
+      '9. Ten en cuenta cuántos días quedan en la ciudad. Si aún hay días suficientes, deja las actividades de otras zonas para esos días en lugar de incluirlas ahora.',
+      '10. Distribuye la carga entre los días seleccionados y evita agotar en un solo día actividades que encajan mejor en jornadas posteriores.',
+      '11. Antes de cerrar el plan, revisa expresamente si estás metiendo actividades redundantes o zonas que sería mejor reservar para días posteriores.',
+      '12. Prioriza Imprescindible y Alta, pero no uses la prioridad como excusa para romper la coherencia geográfica.',
+      '13. Integra cafés, cerveza, comida, cena y copas según nuestro ritmo y cerca del recorrido.',
+      '14. Ordena las paradas de forma práctica y caminable cuando sea posible.',
+      '15. Incluye siempre cada desplazamiento entre paradas como una línea propia del itinerario, indicando el medio recomendado y un tiempo estimado realista.',
+      '16. Para cada trayecto especifica una opción concreta, por ejemplo: 15 min andando, 12 min en metro más 5 min andando, 20 min en tren o 10 min en taxi.',
+      '17. Añade margen razonable para entrar y salir de estaciones, esperas, transbordos, orientación y pequeños retrasos. No uses solo el tiempo puro del tren.',
+      '18. Prioriza caminar cuando el trayecto sea agradable y razonable; usa metro o tren cuando reduzca claramente el tiempo o el cansancio.',
+      '19. Si no puedes verificar una duración exacta, da una estimación prudente y márcala como aproximada.',
+      '20. Los tiempos de traslado deben contar dentro de la duración total del día y pueden justificar eliminar o mover actividades.',
+      '21. Si alguna opción encaja mejor en otro día restante, déjala fuera del plan principal e indica en qué día o zona la colocarías.',
+      '22. Si faltan actividades para completar la jornada, conserva tiempo libre. No cruces la ciudad para rellenar horas.',
+      '23. No inventes lugares salvo en una sección opcional separada, y no los añadas al itinerario principal.',
+      '24. Señala horarios, reservas o cierres que deban comprobarse.',
       '',
       'FORMATO DE RESPUESTA',
       '- Resumen de barrios y lógica de agrupación.',

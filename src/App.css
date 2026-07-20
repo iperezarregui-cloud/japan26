@@ -5479,3 +5479,78 @@ IMPORTAR PROPUESTAS DE IA
   font-weight: 700;
   line-height: 1.45;
 }
+
+
+/* =====================================================
+EDICION DE ACTIVIDADES EN VENTANA CENTRADA
+===================================================== */
+.place-form.activity-edit-modal {
+  position: fixed;
+  z-index: 1501;
+  top: 50%;
+  left: 50%;
+  width: min(540px, calc(100vw - 32px));
+  max-height: min(86vh, 760px);
+  margin: 0;
+  overflow-y: auto;
+  transform: translate(-50%, -50%);
+  border-color: #e2e4e8;
+  background: #ffffff;
+  box-shadow: 0 24px 80px rgba(23, 32, 51, 0.28);
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.place-form.activity-edit-modal::before {
+  position: fixed;
+  z-index: -1;
+  inset: -100vh -100vw;
+  background: rgba(23, 32, 51, 0.52);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  content: '';
+}
+
+.place-form.activity-edit-modal .activity-form-heading {
+  position: sticky;
+  z-index: 2;
+  top: -20px;
+  margin: -20px -20px 2px;
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid #eceef1;
+  background: #ffffff;
+}
+
+.place-form.activity-edit-modal .save-button {
+  position: sticky;
+  bottom: -20px;
+  margin: 2px -20px -20px;
+  border-radius: 0 0 20px 20px;
+}
+
+@media (max-width: 520px) {
+  .place-form.activity-edit-modal {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-height: 91vh;
+    padding: 20px 16px;
+    transform: none;
+    border-radius: 24px 24px 0 0;
+  }
+
+  .place-form.activity-edit-modal .activity-form-heading {
+    top: -20px;
+    margin: -20px -16px 2px;
+    padding: 20px 16px 14px;
+  }
+
+  .place-form.activity-edit-modal .save-button {
+    bottom: -20px;
+    margin: 2px -16px -20px;
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+    border-radius: 0;
+  }
+}

@@ -5215,3 +5215,130 @@ ANADIR ACTIVIDADES DIRECTAMENTE AL ITINERARIO
   font-size: 11px;
   font-weight: 700;
 }
+
+
+/* =====================================================
+GENERADOR DE PROMPTS
+===================================================== */
+.day-prompt-button {
+  min-height: 42px;
+  border: 1px solid #ffd4db;
+  border-radius: 12px;
+  background: #fff0f2;
+  color: #c23e51;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.prompt-generator-form,
+.generated-prompt-section {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.prompt-generator-form label {
+  display: grid;
+  gap: 7px;
+  color: #4f5869;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.prompt-generator-form select,
+.prompt-generator-form textarea {
+  width: 100%;
+  border: 1px solid #dfe1e6;
+  border-radius: 12px;
+  outline: none;
+  background: #ffffff;
+  color: #172033;
+  font: inherit;
+  font-size: 13px;
+}
+
+.prompt-generator-form select {
+  min-height: 44px;
+  padding: 0 12px;
+}
+
+.prompt-generator-form textarea {
+  min-height: 84px;
+  padding: 11px 12px;
+  resize: vertical;
+}
+
+.prompt-preferences {
+  display: grid;
+  gap: 9px;
+}
+
+.prompt-preferences > strong {
+  color: #4f5869;
+  font-size: 11px;
+}
+
+.prompt-preferences > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.prompt-preferences button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid #e1e3e7;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #687181;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.prompt-preferences button.selected {
+  border-color: #172033;
+  background: #172033;
+  color: #ffffff;
+}
+
+.generated-prompt-section textarea {
+  width: 100%;
+  min-height: 340px;
+  padding: 14px;
+  border: 1px solid #dfe1e6;
+  border-radius: 13px;
+  outline: none;
+  background: #f7f8fa;
+  color: #172033;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.copy-prompt-button {
+  min-height: 46px;
+  border: 0;
+  border-radius: 13px;
+  background: #172033;
+  color: #ffffff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.regenerate-prompt-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #596171;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  text-decoration: underline;
+  cursor: pointer;
+}

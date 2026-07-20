@@ -197,6 +197,7 @@ function formatTime(time) {
 
 function DayItems({ day }) {
   const [items, setItems] = useState([])
+  const [allItineraryItems, setAllItineraryItems] = useState([])
   const [activities, setActivities] = useState([])
   const [hotels, setHotels] = useState([])
   const [selectedHotel, setSelectedHotel] = useState(null)
@@ -234,6 +235,19 @@ function DayItems({ day }) {
 
   const [errorMessage, setErrorMessage] =
     useState('')
+
+  const [showPromptGenerator, setShowPromptGenerator] =
+    useState(false)
+  const [promptScope, setPromptScope] =
+    useState('day')
+  const [promptPreferences, setPromptPreferences] =
+    useState([])
+  const [promptNotes, setPromptNotes] =
+    useState('')
+  const [generatedPrompt, setGeneratedPrompt] =
+    useState('')
+  const [promptCopied, setPromptCopied] =
+    useState(false)
 
   const sortedItems = useMemo(() => {
     return [...items].sort((first, second) => {
@@ -362,6 +376,7 @@ function DayItems({ day }) {
 
     const [
       itemsResult,
+      allItemsResult,
       activitiesResult,
       hotelsResult,
       daysResult,
@@ -377,6 +392,10 @@ function DayItems({ day }) {
         .order('position', {
           ascending: true,
         }),
+
+      supabase
+        .from('itinerary_items')
+        .select('*'),
 
       supabase
         .from('activities')
@@ -395,7 +414,7 @@ function DayItems({ day }) {
       supabase
         .from('itinerary_days')
         .select(
-          'id, day_number, city, title'
+          'id, day_number, city, title, travel_date'
         )
         .order('day_number', {
           ascending: true,
@@ -415,6 +434,18 @@ function DayItems({ day }) {
       )
     } else {
       setItems(itemsResult.data || [])
+    }
+
+    if (allItemsResult.error) {
+      console.error(
+        'Error al cargar el itinerario completo:',
+        allItemsResult.error
+      )
+      errors.push(
+        'No se pudo cargar el contexto completo.'
+      )
+    } else {
+      setAllItineraryItems(allItemsResult.data || [])
     }
 
     if (activitiesResult.error) {
@@ -1429,6 +1460,219 @@ function DayItems({ day }) {
     openExternalLink(routeUrl)
   }
 
+  const promptPreferenceOptions = [
+    'Empezar temprano',
+    'Ritmo tranquilo',
+    'Aprovechar al máximo',
+    'Priorizar recorridos a pie',
+    'Aceptar más desplazamientos',
+    'Incluir comida y cena',
+    'Priorizar el atardecer',
+    'Terminar con vida nocturna',
+    'Solo prioridades altas',
+    'Tener en cuenta reservas',
+  ]
+
+  function togglePromptPreference(preference) {
+    setPromptPreferences((current) =>
+      current.includes(preference)
+        ? current.filter((item) => item !== preference)
+        : [...current, preference]
+    )
+  }
+
+  function openPromptGenerator() {
+    setPromptScope('day')
+    setPromptPreferences([])
+    setPromptNotes('')
+    setGeneratedPrompt('')
+    setPromptCopied(false)
+    setShowPromptGenerator(true)
+  }
+
+  function closePromptGenerator() {
+    setShowPromptGenerator(false)
+    setGeneratedPrompt('')
+    setPromptCopied(false)
+  }
+
+  function formatPromptActivity(activity) {
+    const priority = getPriority(activity.priority).label
+    const type = getActivityType(activity.item_type).label
+    const details = [
+      activity.neighborhood
+        ? 'Barrio: ' + activity.neighborhood
+        : null,
+      'Tipo: ' + type,
+      activity.category
+        ? 'Categoría: ' + activity.category
+        : null,
+      'Prioridad: ' + priority,
+      activity.estimated_duration
+        ? 'Duración: ' + activity.estimated_duration + ' min'
+        : 'Duración: no indicada',
+      activity.maps_name
+        ? 'Google Maps: ' + activity.maps_name
+        : null,
+      activity.description
+        ? 'Notas: ' + activity.description
+        : null,
+    ].filter(Boolean)
+
+    return '- ' + activity.name + '\n  ' + details.join('\n  ')
+  }
+
+  function generatePlanningPrompt() {
+    const orderedDays = [...itineraryDays].sort(
+      (first, second) =>
+        Number(first.day_number) - Number(second.day_number)
+    )
+    const currentIndex = orderedDays.findIndex(
+      (itineraryDay) => itineraryDay.id === day.id
+    )
+    const sameCityFromCurrent = orderedDays.filter(
+      (itineraryDay, index) =>
+        index >= currentIndex && itineraryDay.city === day.city
+    )
+
+    let selectedDays
+    if (promptScope === 'day') {
+      selectedDays = [day]
+    } else if (promptScope === 'next') {
+      selectedDays = sameCityFromCurrent.slice(0, 2)
+    } else {
+      selectedDays = sameCityFromCurrent
+    }
+
+    const selectedDayIds = new Set(
+      selectedDays.map((selectedDay) => selectedDay.id)
+    )
+    const assignedActivityIds = new Set(
+      allItineraryItems
+        .filter((item) => item.activity_id)
+        .map((item) => Number(item.activity_id))
+    )
+    const selectedAssignments = allItineraryItems.filter(
+      (item) => selectedDayIds.has(item.day_id)
+    )
+    const cityActivities = activities.filter(
+      (activity) => activity.city === day.city
+    )
+    const completed = cityActivities.filter(
+      (activity) => activity.done
+    )
+    const pending = cityActivities.filter(
+      (activity) => !activity.done
+    )
+    const assignedElsewhere = pending.filter(
+      (activity) =>
+        assignedActivityIds.has(Number(activity.id)) &&
+        !selectedAssignments.some(
+          (item) => Number(item.activity_id) === Number(activity.id)
+        )
+    )
+    const available = pending.filter(
+      (activity) => !assignedElsewhere.includes(activity)
+    )
+    const city = getCity(day.city)
+    const nights = selectedDays
+      .map((selectedDay) => {
+        const hotel = getHotelForNight(selectedDay.travel_date)
+        return (
+          'Día ' + selectedDay.day_number + ': ' +
+          (hotel ? hotel.name : 'hotel no identificado')
+        )
+      })
+      .join('\n')
+    const scopeLabel = selectedDays
+      .map((selectedDay) => 'Día ' + selectedDay.day_number)
+      .join(', ')
+
+    const sections = [
+      'Actúa como planificador experto de viajes en Japón.',
+      '',
+      'OBJETIVO',
+      'Organiza ' + scopeLabel + ' en ' + city.label +
+        ' usando principalmente las opciones que ya he guardado. ' +
+        'Decide qué barrios conviene combinar, minimiza desplazamientos ' +
+        'y crea un orden geográfico y temporal realista.',
+      '',
+      'CONTEXTO',
+      '- Ciudad: ' + city.label,
+      '- Día desde el que planifico: ' + day.day_number,
+      '- Días restantes en esta ciudad contando el actual: ' +
+        sameCityFromCurrent.length,
+      '- Días que debes organizar: ' + scopeLabel,
+      '- Hoteles por noche:\n' + nights,
+      '',
+      'PREFERENCIAS',
+      promptPreferences.length
+        ? promptPreferences.map((item) => '- ' + item).join('\n')
+        : '- Sin preferencias adicionales',
+      promptNotes.trim()
+        ? '- Indicaciones adicionales: ' + promptNotes.trim()
+        : '',
+      '',
+      'ACTIVIDADES YA COMPLETADAS',
+      completed.length
+        ? completed.map(formatPromptActivity).join('\n')
+        : '- Ninguna registrada',
+      '',
+      'ACTIVIDADES PENDIENTES DISPONIBLES',
+      available.length
+        ? available.map(formatPromptActivity).join('\n')
+        : '- Ninguna disponible',
+      '',
+      'ACTIVIDADES PENDIENTES YA ASIGNADAS A OTROS DÍAS',
+      assignedElsewhere.length
+        ? assignedElsewhere.map(formatPromptActivity).join('\n')
+        : '- Ninguna',
+      '',
+      'INSTRUCCIONES',
+      '1. Usa solo las actividades disponibles como base del plan.',
+      '2. No repitas actividades completadas ni asignadas a otros días.',
+      '3. Agrupa barrios y lugares por proximidad real.',
+      '4. Prioriza Imprescindible y Alta, sin sobrecargar el día.',
+      '5. Integra Comer y beber en momentos razonables.',
+      '6. Ordena las paradas de forma práctica y caminable cuando sea posible.',
+      '7. Si alguna opción encaja mejor en otro día restante, indícalo.',
+      '8. No inventes lugares salvo en una sección opcional separada.',
+      '9. Señala horarios, reservas o cierres que deban comprobarse.',
+      '',
+      'FORMATO DE RESPUESTA',
+      '- Resumen de barrios y lógica de agrupación.',
+      '- Plan por día con horas aproximadas, orden y duración.',
+      '- Propuesta de comida, cena o tomar algo.',
+      '- Qué dejar para otro día y por qué.',
+      '- Advertencias y comprobaciones necesarias.',
+    ].filter((line) => line !== '')
+
+    setGeneratedPrompt(sections.join('\n'))
+    setPromptCopied(false)
+  }
+
+  async function copyGeneratedPrompt() {
+    if (!generatedPrompt) {
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(generatedPrompt)
+    } catch {
+      const textarea = document.createElement('textarea')
+      textarea.value = generatedPrompt
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+    }
+
+    setPromptCopied(true)
+    window.setTimeout(() => setPromptCopied(false), 2200)
+  }
+
   if (loadingItems) {
     return (
       <div className="manual-items-loading">
@@ -1828,6 +2072,14 @@ function DayItems({ day }) {
         >
           🗺️ Ruta del día
         </button>
+
+        <button
+          className="day-prompt-button"
+          type="button"
+          onClick={openPromptGenerator}
+        >
+          ✨ Generar prompt
+        </button>
       </div>
 
       {!showNewItemForm && (
@@ -1838,6 +2090,130 @@ function DayItems({ day }) {
         >
           + Añadir al día
         </button>
+      )}
+
+      {showPromptGenerator && (
+        <div
+          className="compact-panel-backdrop"
+          role="presentation"
+          onClick={closePromptGenerator}
+        >
+          <article
+            className="compact-panel prompt-generator-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="prompt-generator-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              className="compact-panel-close"
+              type="button"
+              onClick={closePromptGenerator}
+              aria-label="Cerrar generador"
+            >
+              ×
+            </button>
+
+            <span className="compact-panel-icon">✨</span>
+            <p className="section-label">GENERADOR DE PROMPT</p>
+            <h2 id="prompt-generator-title">
+              Organizar Día {day.day_number}
+            </h2>
+
+            {!generatedPrompt ? (
+              <div className="prompt-generator-form">
+                <label>
+                  1. Alcance
+                  <select
+                    value={promptScope}
+                    onChange={(event) =>
+                      setPromptScope(event.target.value)
+                    }
+                  >
+                    <option value="day">Solo este día</option>
+                    <option value="next">
+                      Este día y el siguiente en la ciudad
+                    </option>
+                    <option value="remaining">
+                      Todos los días restantes en la ciudad
+                    </option>
+                  </select>
+                </label>
+
+                <div className="prompt-preferences">
+                  <strong>2. Preferencias</strong>
+                  <div>
+                    {promptPreferenceOptions.map((preference) => (
+                      <button
+                        className={
+                          promptPreferences.includes(preference)
+                            ? 'selected'
+                            : ''
+                        }
+                        key={preference}
+                        type="button"
+                        onClick={() =>
+                          togglePromptPreference(preference)
+                        }
+                      >
+                        {preference}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <label>
+                  Indicaciones adicionales
+                  <textarea
+                    rows="3"
+                    value={promptNotes}
+                    onChange={(event) =>
+                      setPromptNotes(event.target.value)
+                    }
+                    placeholder="Ej. Terminar en Shibuya Sky al atardecer..."
+                  />
+                </label>
+
+                <button
+                  className="save-button"
+                  type="button"
+                  onClick={generatePlanningPrompt}
+                >
+                  ✨ Generar prompt
+                </button>
+              </div>
+            ) : (
+              <div className="generated-prompt-section">
+                <textarea
+                  readOnly
+                  value={generatedPrompt}
+                  aria-label="Prompt generado"
+                />
+
+                <button
+                  className="copy-prompt-button"
+                  type="button"
+                  onClick={copyGeneratedPrompt}
+                >
+                  {promptCopied
+                    ? '✓ Prompt copiado'
+                    : '📋 Copiar prompt'}
+                </button>
+
+                <button
+                  className="regenerate-prompt-button"
+                  type="button"
+                  onClick={() => {
+                    setGeneratedPrompt('')
+                    setPromptCopied(false)
+                  }}
+                >
+                  Cambiar alcance o preferencias
+                </button>
+              </div>
+            )}
+          </article>
+        </div>
       )}
 
       {selectedHotel && (

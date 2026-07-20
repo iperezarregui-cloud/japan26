@@ -121,6 +121,7 @@ const placeCategoryOptions = [
   'Parque',
   'Paseo',
   'Templo o santuario',
+  'Watch hunting',
 ]
 
 const foodCategoryOptions = [
@@ -157,6 +158,7 @@ const categoryIcons = {
   Ramen: '🍜',
   Sushi: '🍣',
   'Tomar algo': '🍻',
+  'Watch hunting': '⌚',
 }
 
 const priorityOrder = {

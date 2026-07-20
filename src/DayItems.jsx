@@ -77,6 +77,7 @@ const activityCategoryIcons = {
   Ramen: '🍜',
   Sushi: '🍣',
   'Tomar algo': '🍻',
+  'Watch hunting': '⌚',
 }
 
 function getActivityIcon(activity) {

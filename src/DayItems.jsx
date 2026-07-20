@@ -1731,7 +1731,7 @@ function DayItems({ day }) {
       '  ]',
       '}',
       'Para actividades existentes usa type activity y activity_id. Para traslados usa type transport. Para recomendaciones externas usa type external.',
-      'Todas las horas deben usar HH:MM. Incluye en items tanto las visitas como cada traslado, café, cerveza, comida, cena y copa.',
+      'Todas las horas deben usar HH:MM. Para una actividad que termina a medianoche usa 23:59, no 00:00, porque 00:00 se interpreta como anterior a una hora nocturna del mismo día. Incluye en items tanto las visitas como cada traslado, café, cerveza, comida, cena y copa.',
     ].filter((line) => line !== '')
 
     setGeneratedPrompt(sections.join('\n'))
@@ -1985,6 +1985,14 @@ function DayItems({ day }) {
       const rows = selectedItems.map((item, index) => {
         const isActivity = item.type === 'activity'
         const linkedActivity = item.linkedActivity
+        const startTime = item.start_time || null
+        let endTime = item.end_time || null
+
+        if (startTime && endTime && endTime <= startTime) {
+          endTime = startTime >= '20:00' && endTime === '00:00'
+            ? '23:59'
+            : null
+        }
 
         return {
           day_id: previewDay.targetDay.id,
@@ -1994,8 +2002,8 @@ function DayItems({ day }) {
             : item.type === 'transport'
               ? 'transport'
               : 'manual',
-          start_time: item.start_time || null,
-          end_time: item.end_time || null,
+          start_time: startTime,
+          end_time: endTime,
           title: isActivity
             ? linkedActivity.name
             : String(item.title || '').trim(),

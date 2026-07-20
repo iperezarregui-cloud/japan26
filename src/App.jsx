@@ -76,7 +76,7 @@ const sections = {
       'Añade lugares, actividades, excursiones y experiencias.',
   },
   food: {
-    label: 'Comer',
+    label: 'Comer y beber',
     singular: 'restaurante',
     icon: '🍜',
     emptyTitle: 'Aún no hay restaurantes añadidos',
@@ -108,19 +108,31 @@ const priorityOptions = [
   },
 ]
 
-const categoryOptions = [
-  'Templo o santuario',
-  'Museo',
-  'Parque',
-  'Mirador',
-  'Mercado',
+const placeCategoryOptions = [
   'Barrio',
-  'Paseo',
   'Compras',
   'Cultura',
-  'Gastronomía',
-  'Experiencia urbana',
   'Excursión',
+  'Experiencia urbana',
+  'Gastronomía',
+  'Mercado',
+  'Mirador',
+  'Museo',
+  'Parque',
+  'Paseo',
+  'Templo o santuario',
+]
+
+const foodCategoryOptions = [
+  'Ambiente',
+  'Café',
+  'Carne',
+  'Cócteles',
+  'Especialidad',
+  'Pescado',
+  'Ramen',
+  'Sushi',
+  'Tomar algo',
 ]
 
 const categoryIcons = {
@@ -136,6 +148,15 @@ const categoryIcons = {
   Gastronomía: '🍜',
   'Experiencia urbana': '🌃',
   Excursión: '🚆',
+  Ambiente: '🎶',
+  Café: '☕',
+  Carne: '🥩',
+  Cócteles: '🍸',
+  Especialidad: '⭐',
+  Pescado: '🐟',
+  Ramen: '🍜',
+  Sushi: '🍣',
+  'Tomar algo': '🍻',
 }
 
 const priorityOrder = {
@@ -297,6 +318,15 @@ const [
   const [editingActivity, setEditingActivity] =
     useState(null)
 
+  const [assigningActivity, setAssigningActivity] =
+    useState(null)
+
+  const [assigningDayId, setAssigningDayId] =
+    useState('')
+
+  const [addingActivityToDay, setAddingActivityToDay] =
+    useState(false)
+
   const [activityFilter, setActivityFilter] =
     useState('all')
 
@@ -329,6 +359,11 @@ const [
   const currentSection = currentItemType
     ? sections[currentItemType]
     : null
+
+  const currentCategoryOptions =
+    currentItemType === 'food'
+      ? foodCategoryOptions
+      : placeCategoryOptions
 
   const citySectionActivities = useMemo(() => {
     if (!selectedCityId || !currentItemType) {
@@ -685,11 +720,6 @@ const [
     setEditingActivity(activity)
     setShowActivityForm(true)
     setActivitiesError('')
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    })
   }
 
   function closeActivityForm() {
@@ -736,6 +766,9 @@ const [
       ).trim(),
       link: String(
         formData.get('link') || ''
+      ).trim(),
+      maps_name: String(
+        formData.get('maps_name') || ''
       ).trim(),
       tiktok_link: String(
         formData.get('tiktok_link') || ''
@@ -863,6 +896,104 @@ const [
         }
       )
     )
+  }
+
+  function openAssignActivity(activity) {
+    setAssigningActivity(activity)
+    setAssigningDayId('')
+    setActivitiesError('')
+  }
+
+  function closeAssignActivity() {
+    setAssigningActivity(null)
+    setAssigningDayId('')
+    setActivitiesError('')
+  }
+
+  async function addActivityToDay(event) {
+    event.preventDefault()
+
+    if (
+      !assigningActivity ||
+      !assigningDayId ||
+      addingActivityToDay
+    ) {
+      return
+    }
+
+    const numericDayId = Number(assigningDayId)
+    setAddingActivityToDay(true)
+    setActivitiesError('')
+
+    const duplicateResult = await supabase
+      .from('itinerary_items')
+      .select('id')
+      .eq('day_id', numericDayId)
+      .eq('activity_id', assigningActivity.id)
+      .limit(1)
+
+    if (duplicateResult.error) {
+      setActivitiesError(
+        'No se pudo comprobar el itinerario.'
+      )
+      setAddingActivityToDay(false)
+      return
+    }
+
+    if ((duplicateResult.data || []).length > 0) {
+      setActivitiesError(
+        'Esta actividad ya está añadida a ese día.'
+      )
+      setAddingActivityToDay(false)
+      return
+    }
+
+    const itemsResult = await supabase
+      .from('itinerary_items')
+      .select('id')
+      .eq('day_id', numericDayId)
+
+    if (itemsResult.error) {
+      setActivitiesError(
+        'No se pudo preparar el día seleccionado.'
+      )
+      setAddingActivityToDay(false)
+      return
+    }
+
+    const result = await supabase
+      .from('itinerary_items')
+      .insert({
+        day_id: numericDayId,
+        activity_id: assigningActivity.id,
+        item_type: 'activity',
+        start_time: null,
+        end_time: null,
+        title: assigningActivity.name,
+        description: '',
+        link: assigningActivity.link || '',
+        maps_name: assigningActivity.maps_name || '',
+        reserved: false,
+        paid: false,
+        position: (itemsResult.data || []).length,
+      })
+      .select()
+      .single()
+
+    if (result.error) {
+      console.error(
+        'Error al añadir la actividad al día:',
+        result.error
+      )
+      setActivitiesError(
+        'No se pudo añadir la actividad al itinerario.'
+      )
+      setAddingActivityToDay(false)
+      return
+    }
+
+    setAddingActivityToDay(false)
+    closeAssignActivity()
   }
 
   async function deleteActivity(activity) {
@@ -1142,7 +1273,7 @@ const [
                 }
               >
                 🍜
-                <span>Comer</span>
+                <span>Comer y beber</span>
               </button>
             </nav>
 
@@ -1206,7 +1337,11 @@ const [
 
                 {showActivityForm && (
                   <form
-                    className="place-form"
+                    className={
+                      editingActivity
+                        ? 'place-form activity-edit-modal'
+                        : 'place-form'
+                    }
                     onSubmit={saveActivity}
                     key={
                       editingActivity
@@ -1305,7 +1440,7 @@ const [
                             Sin categoría
                           </option>
 
-                          {categoryOptions.map(
+                          {currentCategoryOptions.map(
                             (category) => (
                               <option
                                 key={category}
@@ -1371,6 +1506,20 @@ const [
                             ?.description || ''
                         }
                         placeholder="Qué quieres ver o recordar..."
+                      />
+                    </label>
+
+                    <label>
+                      Nombre exacto en Google Maps
+
+                      <input
+                        name="maps_name"
+                        type="text"
+                        defaultValue={
+                          editingActivity?.maps_name || ''
+                        }
+                        placeholder="Ej. Omoide Yokocho"
+                        required
                       />
                     </label>
 
@@ -1558,21 +1707,27 @@ const [
 
                               {activity.link && (
                             <a
+                              className="activity-icon-link"
                               href={activity.link}
                               target="_blank"
                               rel="noreferrer"
+                              aria-label="Abrir en Google Maps"
+                              title="Abrir en Google Maps"
                             >
-                              Abrir en Google Maps
+                              <span aria-hidden="true">🗺️</span>
                             </a>
                           )}
 
                           {activity.tiktok_link && (
                             <a
+                              className="activity-icon-link"
                               href={activity.tiktok_link}
                               target="_blank"
                               rel="noreferrer"
+                              aria-label="Ver vídeo en TikTok"
+                              title="Ver vídeo en TikTok"
                             >
-                              Ver en TikTok
+                              <span aria-hidden="true">🎬</span>
                             </a>
                           )}
 
@@ -1592,6 +1747,22 @@ const [
                         </div>
 
                         <div className="activity-card-actions">
+                          <button
+                            className="activity-day-button"
+                            type="button"
+                            onClick={() =>
+                              openAssignActivity(activity)
+                            }
+                            aria-label={
+                              'Añadir ' +
+                              activity.name +
+                              ' a un día'
+                            }
+                            title="Añadir al itinerario"
+                          >
+                            ＋
+                          </button>
+
                           <button
                             className="activity-edit-button"
                             type="button"
@@ -1631,6 +1802,106 @@ const [
             )}
           </section>
         )}
+
+      {assigningActivity && (
+        <div
+          className="activity-modal-backdrop"
+          role="presentation"
+          onClick={closeAssignActivity}
+        >
+          <article
+            className="activity-modal assign-day-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="assign-day-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              className="activity-modal-close"
+              type="button"
+              onClick={closeAssignActivity}
+              aria-label="Cerrar"
+            >
+              ×
+            </button>
+
+            <span className="activity-modal-icon">
+              {getCategoryIcon(
+                assigningActivity.category,
+                assigningActivity.item_type
+              )}
+            </span>
+
+            <p className="section-label">
+              AÑADIR AL ITINERARIO
+            </p>
+
+            <h2 id="assign-day-title">
+              {assigningActivity.name}
+            </h2>
+
+            <form
+              className="assign-day-form"
+              onSubmit={addActivityToDay}
+            >
+              <label>
+                Día
+
+                <select
+                  value={assigningDayId}
+                  onChange={(event) =>
+                    setAssigningDayId(
+                      event.target.value
+                    )
+                  }
+                  required
+                >
+                  <option value="">
+                    Seleccionar día
+                  </option>
+
+                  {[...itineraryDays]
+                    .sort(
+                      (first, second) =>
+                        Number(first.day_number) -
+                        Number(second.day_number)
+                    )
+                    .map((day) => (
+                      <option
+                        key={day.id}
+                        value={day.id}
+                      >
+                        Día {day.day_number}
+                        {day.city === assigningActivity.city
+                          ? ' · misma ciudad'
+                          : ''}
+                      </option>
+                    ))}
+                </select>
+              </label>
+
+              {activitiesError && (
+                <p className="assign-day-error">
+                  {activitiesError}
+                </p>
+              )}
+
+              <button
+                className="save-button"
+                type="submit"
+                disabled={
+                  !assigningDayId ||
+                  addingActivityToDay
+                }
+              >
+                {addingActivityToDay
+                  ? 'Añadiendo...'
+                  : 'Añadir al día'}
+              </button>
+            </form>
+          </article>
+        </div>
+      )}
     </main>
   )
 }

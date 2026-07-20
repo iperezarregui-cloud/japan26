@@ -5466,3 +5466,16 @@ IMPORTAR PROPUESTAS DE IA
   font-size: 9px;
   font-weight: 700;
 }
+
+
+.import-proposal-warning {
+  margin: 0;
+  padding: 11px 12px;
+  border: 1px solid #f1d58a;
+  border-radius: 11px;
+  background: #fff8df;
+  color: #775d16;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.45;
+}

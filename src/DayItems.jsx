@@ -1710,6 +1710,16 @@ function DayItems({ day }) {
       '- Para cada recomendación externa: nombre exacto, tipo, motivo geográfico y experiencial, desvío estimado, terraza o exterior y datos por comprobar.',
       '- Advertencias y comprobaciones necesarias.',
       '',
+      'REGLAS PARA RECOMENDACIONES EXTERNAS',
+      '- No incluyas una recomendación externa en el plan principal sin comprobar su encaje entre la parada anterior y la siguiente.',
+      '- Calcula el desvío total, no solo la distancia desde la parada anterior.',
+      '- Para café, cerveza o copa, el desvío adicional recomendado debe ser como máximo de 15 minutos. Para comida puede llegar a 20 minutos si merece la pena.',
+      '- Si no puedes verificar la geografía o los tiempos, deja geography_verified en false y explica qué debe comprobarse.',
+      '- Una recomendación con geography_verified false puede aparecer como opción, pero no debe presentarse como parada fiable ni usar tiempos exactos inventados.',
+      '- No afirmes que un trayecto dura 10 o 15 minutos si no lo has comprobado.',
+      '- Si dos paradas consecutivas ocurren en el mismo establecimiento, fusiónalas en una sola parada con un único intervalo horario.',
+      '- Si no existe una opción externa fiable, crea una pausa flexible por la zona sin destino concreto y sin maps_name.',
+      '',
       'BLOQUE IMPORTABLE PARA JAPAN26',
       'Al final de la respuesta incluye un único bloque de código JSON válido y después no escribas nada más.',
       'No incluyas comentarios dentro del JSON. No inventes activity_id: usa únicamente los ID de actividad incluidos arriba.',
@@ -1725,12 +1735,12 @@ function DayItems({ day }) {
       '      \"items\": [',
       '        { \"type\": \"activity\", \"activity_id\": 123, \"start_time\": \"09:00\", \"end_time\": \"10:30\" },',
       '        { \"type\": \"transport\", \"start_time\": \"10:30\", \"end_time\": \"10:50\", \"title\": \"Traslado a la siguiente zona\", \"description\": \"15 min en metro y 5 min andando\" },',
-      '        { \"type\": \"external\", \"start_time\": \"10:50\", \"end_time\": \"11:30\", \"title\": \"Nombre exacto del local\", \"description\": \"Recomendación externa y motivo\", \"maps_name\": \"Nombre exacto en Google Maps\" }',
+      '        { \"type\": \"external\", \"start_time\": \"10:50\", \"end_time\": \"11:30\", \"title\": \"Nombre exacto del local\", \"description\": \"Recomendación externa y motivo\", \"maps_name\": \"Nombre exacto en Google Maps\", \"previous_stop\": \"Parada anterior\", \"next_stop\": \"Parada siguiente\", \"travel_from_previous_minutes\": 10, \"travel_to_next_minutes\": 8, \"detour_minutes\": 5, \"transport_mode\": \"walking\", \"geography_verified\": true, \"verification_note\": \"Ruta y horario comprobados\" }',
       '      ]',
       '    }',
       '  ]',
       '}',
-      'Para actividades existentes usa type activity y activity_id. Para traslados usa type transport. Para recomendaciones externas usa type external.',
+      'Para actividades existentes usa type activity y activity_id. Para traslados usa type transport. Para recomendaciones externas usa type external e incluye siempre geography_verified, previous_stop, next_stop, detour_minutes y verification_note.',
       'Todas las horas deben usar HH:MM. Para una actividad que termina a medianoche usa 23:59, no 00:00, porque 00:00 se interpreta como anterior a una hora nocturna del mismo día. Incluye en items tanto las visitas como cada traslado, café, cerveza, comida, cena y copa.',
     ].filter((line) => line !== '')
 
@@ -1912,10 +1922,15 @@ function DayItems({ day }) {
           return
         }
 
+        const geographyVerified =
+          type !== 'external' ||
+          importItem.geography_verified === true
+
         previewItems.push({
           ...importItem,
           key,
           linkedActivity,
+          geographyVerified,
         })
       })
 
@@ -1932,7 +1947,9 @@ function DayItems({ day }) {
     }
 
     const keys = previewDays.flatMap((previewDay) =>
-      previewDay.items.map((item) => item.key)
+      previewDay.items
+        .filter((item) => item.geographyVerified)
+        .map((item) => item.key)
     )
 
     setImportPreview({ days: previewDays })
@@ -2699,8 +2716,28 @@ function DayItems({ day }) {
                                 ? 'Actividad existente'
                                 : item.type === 'transport'
                                   ? 'Desplazamiento'
-                                  : 'Recomendación externa'}
+                                  : item.geographyVerified
+                                    ? 'Recomendación externa · geografía verificada'
+                                    : '⚠ Recomendación externa · por comprobar'}
                             </small>
+                            {item.type === 'external' && (
+                              <small>
+                                {item.previous_stop
+                                  ? 'Desde: ' + item.previous_stop
+                                  : 'Origen no indicado'}
+                                {' · '}
+                                {item.next_stop
+                                  ? 'Hacia: ' + item.next_stop
+                                  : 'Siguiente parada no indicada'}
+                                {Number.isFinite(Number(item.detour_minutes))
+                                  ? ' · Desvío: ' + item.detour_minutes + ' min'
+                                  : ' · Desvío no indicado'}
+                              </small>
+                            )}
+                            {item.type === 'external' &&
+                              item.verification_note && (
+                                <small>{item.verification_note}</small>
+                              )}
                           </span>
                         </label>
                       )
@@ -2719,6 +2756,21 @@ function DayItems({ day }) {
                     {importSuccess}
                   </p>
                 )}
+
+                {!importSuccess &&
+                  importPreview.days.some((previewDay) =>
+                    previewDay.items.some(
+                      (item) =>
+                        item.type === 'external' &&
+                        !item.geographyVerified
+                    )
+                  ) && (
+                    <p className="import-proposal-warning">
+                      Las recomendaciones externas no verificadas están
+                      desmarcadas. Revísalas en Google Maps antes de
+                      incluirlas.
+                    </p>
+                  )}
 
                 {!importSuccess && (
                   <button

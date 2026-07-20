@@ -1639,7 +1639,14 @@ function DayItems({ day }) {
       '- Si existe margen real y el hotel queda razonablemente conectado, valora volver al hotel para descansar, ducharnos y cambiarnos antes de salir de noche. No fuerces esta vuelta si rompe la ruta.',
       '- Casi todas las noches queremos una zona animada o agradable, tomar algo antes de cenar, una cena interesante o especial con horario español y después otra copa o un paseo nocturno.',
       '- Cenamos normalmente entre las 21:00 y las 22:30. Solo adelanta la cena por reservas u horarios de cierre y explica el motivo.',
-      '- Para cafés, cerveza, comida, cena y copas, utiliza primero los sitios guardados que encajen geográficamente. Si no existe una opción adecuada, puedes proponer una recomendación externa claramente identificada.',
+      '- Para cafés, cerveza, comida, cena y copas, utiliza primero los sitios guardados que encajen geográficamente. Si no existe una opción adecuada, debes proponer un establecimiento concreto y claramente identificado como recomendación externa.',
+      '- Nunca escribas recomendaciones genéricas como café en la zona, bar con ambiente o sitio para tomar algo. Da el nombre exacto de un establecimiento real y explica brevemente por qué encaja en esta ruta.',
+      '- Para el café, prioriza locales modernos o trendy, café de especialidad y buenos sitios de matcha, porque a Laia le encanta el matcha.',
+      '- Si hay dos paradas de café, intenta que una destaque por café de especialidad y otra por matcha, siempre que encajen naturalmente en el recorrido.',
+      '- Para cerveza, prioriza cerveza artesanal, especialmente IPAs y ales, así como taprooms, brewpubs y cervecerías locales con personalidad.',
+      '- Tanto para cafés como para cerveza, una terraza o espacio exterior es un plus importante, pero no debe provocar un desvío excesivo.',
+      '- En cada recomendación externa indica: nombre exacto, tipo de local, por qué encaja, desvío estimado, si tiene terraza o exterior y qué información debe comprobarse.',
+      '- No inventes establecimientos. Si no puedes verificar que siguen abiertos, marca claramente el sitio como por comprobar.',
       '',
       'CRITERIO Y REDUNDANCIAS',
       '- No intentes incluir todas las actividades pendientes ni maximizar el número de paradas.',
@@ -1675,6 +1682,7 @@ function DayItems({ day }) {
       '- Qué dejar para otro día y por qué, teniendo en cuenta los días restantes en la ciudad.',
       '- Solapamientos y descartes: actividades redundantes o de poco valor adicional que no incluirías.',
       '- Recomendaciones externas claramente marcadas como no guardadas en Japan26.',
+      '- Para cada recomendación externa: nombre exacto, tipo, motivo geográfico y experiencial, desvío estimado, terraza o exterior y datos por comprobar.',
       '- Advertencias y comprobaciones necesarias.',
     ].filter((line) => line !== '')
 

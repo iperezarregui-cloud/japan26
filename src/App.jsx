@@ -318,6 +318,15 @@ const [
   const [editingActivity, setEditingActivity] =
     useState(null)
 
+  const [assigningActivity, setAssigningActivity] =
+    useState(null)
+
+  const [assigningDayId, setAssigningDayId] =
+    useState('')
+
+  const [addingActivityToDay, setAddingActivityToDay] =
+    useState(false)
+
   const [activityFilter, setActivityFilter] =
     useState('all')
 
@@ -892,6 +901,104 @@ const [
         }
       )
     )
+  }
+
+  function openAssignActivity(activity) {
+    setAssigningActivity(activity)
+    setAssigningDayId('')
+    setActivitiesError('')
+  }
+
+  function closeAssignActivity() {
+    setAssigningActivity(null)
+    setAssigningDayId('')
+    setActivitiesError('')
+  }
+
+  async function addActivityToDay(event) {
+    event.preventDefault()
+
+    if (
+      !assigningActivity ||
+      !assigningDayId ||
+      addingActivityToDay
+    ) {
+      return
+    }
+
+    const numericDayId = Number(assigningDayId)
+    setAddingActivityToDay(true)
+    setActivitiesError('')
+
+    const duplicateResult = await supabase
+      .from('itinerary_items')
+      .select('id')
+      .eq('day_id', numericDayId)
+      .eq('activity_id', assigningActivity.id)
+      .limit(1)
+
+    if (duplicateResult.error) {
+      setActivitiesError(
+        'No se pudo comprobar el itinerario.'
+      )
+      setAddingActivityToDay(false)
+      return
+    }
+
+    if ((duplicateResult.data || []).length > 0) {
+      setActivitiesError(
+        'Esta actividad ya está añadida a ese día.'
+      )
+      setAddingActivityToDay(false)
+      return
+    }
+
+    const itemsResult = await supabase
+      .from('itinerary_items')
+      .select('id')
+      .eq('day_id', numericDayId)
+
+    if (itemsResult.error) {
+      setActivitiesError(
+        'No se pudo preparar el día seleccionado.'
+      )
+      setAddingActivityToDay(false)
+      return
+    }
+
+    const result = await supabase
+      .from('itinerary_items')
+      .insert({
+        day_id: numericDayId,
+        activity_id: assigningActivity.id,
+        item_type: 'activity',
+        start_time: null,
+        end_time: null,
+        title: assigningActivity.name,
+        description: '',
+        link: assigningActivity.link || '',
+        maps_name: assigningActivity.maps_name || '',
+        reserved: false,
+        paid: false,
+        position: (itemsResult.data || []).length,
+      })
+      .select()
+      .single()
+
+    if (result.error) {
+      console.error(
+        'Error al añadir la actividad al día:',
+        result.error
+      )
+      setActivitiesError(
+        'No se pudo añadir la actividad al itinerario.'
+      )
+      setAddingActivityToDay(false)
+      return
+    }
+
+    setAddingActivityToDay(false)
+    closeAssignActivity()
   }
 
   async function deleteActivity(activity) {
@@ -1642,6 +1749,22 @@ const [
 
                         <div className="activity-card-actions">
                           <button
+                            className="activity-day-button"
+                            type="button"
+                            onClick={() =>
+                              openAssignActivity(activity)
+                            }
+                            aria-label={
+                              'Añadir ' +
+                              activity.name +
+                              ' a un día'
+                            }
+                            title="Añadir al itinerario"
+                          >
+                            ＋
+                          </button>
+
+                          <button
                             className="activity-edit-button"
                             type="button"
                             onClick={() =>
@@ -1680,6 +1803,106 @@ const [
             )}
           </section>
         )}
+
+      {assigningActivity && (
+        <div
+          className="activity-modal-backdrop"
+          role="presentation"
+          onClick={closeAssignActivity}
+        >
+          <article
+            className="activity-modal assign-day-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="assign-day-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              className="activity-modal-close"
+              type="button"
+              onClick={closeAssignActivity}
+              aria-label="Cerrar"
+            >
+              ×
+            </button>
+
+            <span className="activity-modal-icon">
+              {getCategoryIcon(
+                assigningActivity.category,
+                assigningActivity.item_type
+              )}
+            </span>
+
+            <p className="section-label">
+              AÑADIR AL ITINERARIO
+            </p>
+
+            <h2 id="assign-day-title">
+              {assigningActivity.name}
+            </h2>
+
+            <form
+              className="assign-day-form"
+              onSubmit={addActivityToDay}
+            >
+              <label>
+                Día
+
+                <select
+                  value={assigningDayId}
+                  onChange={(event) =>
+                    setAssigningDayId(
+                      event.target.value
+                    )
+                  }
+                  required
+                >
+                  <option value="">
+                    Seleccionar día
+                  </option>
+
+                  {[...itineraryDays]
+                    .sort(
+                      (first, second) =>
+                        Number(first.day_number) -
+                        Number(second.day_number)
+                    )
+                    .map((day) => (
+                      <option
+                        key={day.id}
+                        value={day.id}
+                      >
+                        Día {day.day_number}
+                        {day.city === assigningActivity.city
+                          ? ' · misma ciudad'
+                          : ''}
+                      </option>
+                    ))}
+                </select>
+              </label>
+
+              {activitiesError && (
+                <p className="assign-day-error">
+                  {activitiesError}
+                </p>
+              )}
+
+              <button
+                className="save-button"
+                type="submit"
+                disabled={
+                  !assigningDayId ||
+                  addingActivityToDay
+                }
+              >
+                {addingActivityToDay
+                  ? 'Añadiendo...'
+                  : 'Añadir al día'}
+              </button>
+            </form>
+          </article>
+        </div>
+      )}
     </main>
   )
 }

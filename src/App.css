@@ -5153,3 +5153,65 @@ HOTEL DE LA NOCHE Y RUTA DEL DIA
   font-weight: 900;
   cursor: pointer;
 }
+
+
+/* =====================================================
+ANADIR ACTIVIDADES DIRECTAMENTE AL ITINERARIO
+===================================================== */
+.activity-day-button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #ffe8eb;
+  color: #c23e51;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.assign-day-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.assign-day-form label {
+  display: grid;
+  gap: 7px;
+  color: #4f5869;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.assign-day-form select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #dfe1e6;
+  border-radius: 12px;
+  outline: none;
+  background: #ffffff;
+  color: #172033;
+  font: inherit;
+  font-size: 13px;
+}
+
+.assign-day-form select:focus {
+  border-color: #e84f5f;
+  box-shadow: 0 0 0 3px rgba(232, 79, 95, 0.1);
+}
+
+.assign-day-error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff0f2;
+  color: #bd5362;
+  font-size: 11px;
+  font-weight: 700;
+}

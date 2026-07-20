@@ -55,6 +55,41 @@ const activityTypeInformation = {
   },
 }
 
+const activityCategoryIcons = {
+  'Templo o santuario': '⛩️',
+  Museo: '🏛️',
+  Parque: '🌳',
+  Mirador: '🌇',
+  Mercado: '🏮',
+  Barrio: '🏙️',
+  Paseo: '🚶',
+  Compras: '🛍️',
+  Cultura: '🎭',
+  Gastronomía: '🍜',
+  'Experiencia urbana': '🌃',
+  Excursión: '🚆',
+  Ambiente: '🎶',
+  Café: '☕',
+  Carne: '🥩',
+  Cócteles: '🍸',
+  Especialidad: '⭐',
+  Pescado: '🐟',
+  Ramen: '🍜',
+  Sushi: '🍣',
+  'Tomar algo': '🍻',
+}
+
+function getActivityIcon(activity) {
+  if (
+    activity?.category &&
+    activityCategoryIcons[activity.category]
+  ) {
+    return activityCategoryIcons[activity.category]
+  }
+
+  return getActivityType(activity?.item_type).icon
+}
+
 const priorityInformation = {
   essential: {
     label: 'Imprescindible',
@@ -1459,7 +1494,7 @@ function DayItems({ day }) {
               : item.title
 
             const icon = isActivity
-              ? activityType.icon
+              ? getActivityIcon(linkedActivity)
               : manualType.icon
 
             const itemTypeLabel =

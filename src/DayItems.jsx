@@ -249,6 +249,19 @@ function DayItems({ day }) {
   const [promptCopied, setPromptCopied] =
     useState(false)
 
+  const [showImportProposal, setShowImportProposal] =
+    useState(false)
+  const [importText, setImportText] = useState('')
+  const [importPreview, setImportPreview] =
+    useState(null)
+  const [importSelectedKeys, setImportSelectedKeys] =
+    useState([])
+  const [importError, setImportError] = useState('')
+  const [importingProposal, setImportingProposal] =
+    useState(false)
+  const [importSuccess, setImportSuccess] =
+    useState('')
+
   const sortedItems = useMemo(() => {
     return [...items].sort((first, second) => {
       const firstHasTime =
@@ -1519,7 +1532,11 @@ function DayItems({ day }) {
         : null,
     ].filter(Boolean)
 
-    return '- ' + activity.name + '\n  ' + details.join('\n  ')
+    return (
+      '- ' + activity.name +
+      '\n  ID de actividad: ' + activity.id +
+      '\n  ' + details.join('\n  ')
+    )
   }
 
   function generatePlanningPrompt() {
@@ -1692,6 +1709,29 @@ function DayItems({ day }) {
       '- Recomendaciones externas claramente marcadas como no guardadas en Japan26.',
       '- Para cada recomendación externa: nombre exacto, tipo, motivo geográfico y experiencial, desvío estimado, terraza o exterior y datos por comprobar.',
       '- Advertencias y comprobaciones necesarias.',
+      '',
+      'BLOQUE IMPORTABLE PARA JAPAN26',
+      'Al final de la respuesta incluye un único bloque de código JSON válido y después no escribas nada más.',
+      'No incluyas comentarios dentro del JSON. No inventes activity_id: usa únicamente los ID de actividad incluidos arriba.',
+      'Usa exactamente esta estructura:',
+      '{',
+      '  \"japan26_import\": true,',
+      '  \"version\": 1,',
+      '  \"days\": [',
+      '    {',
+      '      \"day_number\": ' + day.day_number + ',',
+      '      \"title\": \"Título propuesto\",',
+      '      \"summary\": \"Resumen breve\",',
+      '      \"items\": [',
+      '        { \"type\": \"activity\", \"activity_id\": 123, \"start_time\": \"09:00\", \"end_time\": \"10:30\" },',
+      '        { \"type\": \"transport\", \"start_time\": \"10:30\", \"end_time\": \"10:50\", \"title\": \"Traslado a la siguiente zona\", \"description\": \"15 min en metro y 5 min andando\" },',
+      '        { \"type\": \"external\", \"start_time\": \"10:50\", \"end_time\": \"11:30\", \"title\": \"Nombre exacto del local\", \"description\": \"Recomendación externa y motivo\", \"maps_name\": \"Nombre exacto en Google Maps\" }',
+      '      ]',
+      '    }',
+      '  ]',
+      '}',
+      'Para actividades existentes usa type activity y activity_id. Para traslados usa type transport. Para recomendaciones externas usa type external.',
+      'Todas las horas deben usar HH:MM. Incluye en items tanto las visitas como cada traslado, café, cerveza, comida, cena y copa.',
     ].filter((line) => line !== '')
 
     setGeneratedPrompt(sections.join('\n'))
@@ -1718,6 +1758,285 @@ function DayItems({ day }) {
 
     setPromptCopied(true)
     window.setTimeout(() => setPromptCopied(false), 2200)
+  }
+
+  function openImportProposal() {
+    setImportText('')
+    setImportPreview(null)
+    setImportSelectedKeys([])
+    setImportError('')
+    setImportSuccess('')
+    setShowImportProposal(true)
+  }
+
+  function closeImportProposal() {
+    if (importingProposal) {
+      return
+    }
+    setShowImportProposal(false)
+    setImportPreview(null)
+    setImportError('')
+    setImportSuccess('')
+  }
+
+  async function pasteImportText() {
+    try {
+      const clipboardText = await navigator.clipboard.readText()
+      setImportText(clipboardText)
+      setImportError('')
+    } catch {
+      setImportError(
+        'El navegador no permite leer el portapapeles. Mantén pulsado en el cuadro y elige Pegar.'
+      )
+    }
+  }
+
+  function extractImportJson(rawText) {
+    const cleaned = rawText
+      .replace(/```json/gi, '')
+      .replace(/```/g, '')
+      .trim()
+
+    try {
+      return JSON.parse(cleaned)
+    } catch {
+      const start = cleaned.indexOf('{')
+      const end = cleaned.lastIndexOf('}')
+      if (start < 0 || end <= start) {
+        throw new Error('No se encontró un bloque JSON.')
+      }
+      return JSON.parse(cleaned.slice(start, end + 1))
+    }
+  }
+
+  function isValidTime(value) {
+    return (
+      value === null ||
+      value === undefined ||
+      value === '' ||
+      /^([01]\\d|2[0-3]):[0-5]\\d$/.test(value)
+    )
+  }
+
+  function analyzeImportProposal() {
+    setImportError('')
+    setImportSuccess('')
+
+    let parsed
+    try {
+      parsed = extractImportJson(importText)
+    } catch (error) {
+      setImportError(
+        'No se pudo leer el JSON: ' + error.message
+      )
+      return
+    }
+
+    if (
+      parsed.japan26_import !== true ||
+      Number(parsed.version) !== 1 ||
+      !Array.isArray(parsed.days)
+    ) {
+      setImportError(
+        'El bloque no tiene el formato Japan26 esperado.'
+      )
+      return
+    }
+
+    const errors = []
+    const previewDays = []
+
+    parsed.days.forEach((importDay, dayIndex) => {
+      const targetDay = itineraryDays.find(
+        (candidate) =>
+          Number(candidate.day_number) ===
+          Number(importDay.day_number)
+      )
+
+      if (!targetDay) {
+        errors.push(
+          'El Día ' + importDay.day_number + ' no existe.'
+        )
+        return
+      }
+
+      if (!Array.isArray(importDay.items)) {
+        errors.push(
+          'El Día ' + importDay.day_number +
+          ' no contiene una lista de elementos.'
+        )
+        return
+      }
+
+      const previewItems = []
+      importDay.items.forEach((importItem, itemIndex) => {
+        const key = dayIndex + '-' + itemIndex
+        const type = String(importItem.type || '')
+        if (!['activity', 'transport', 'external'].includes(type)) {
+          errors.push(
+            'Tipo no válido en el Día ' +
+            importDay.day_number + ': ' + type
+          )
+          return
+        }
+
+        if (
+          !isValidTime(importItem.start_time) ||
+          !isValidTime(importItem.end_time)
+        ) {
+          errors.push(
+            'Hora no válida en el Día ' + importDay.day_number + '.'
+          )
+          return
+        }
+
+        let linkedActivity = null
+        if (type === 'activity') {
+          linkedActivity = activities.find(
+            (activity) =>
+              Number(activity.id) ===
+              Number(importItem.activity_id)
+          )
+          if (!linkedActivity) {
+            errors.push(
+              'La actividad ' + importItem.activity_id +
+              ' no existe en Japan26.'
+            )
+            return
+          }
+        } else if (!String(importItem.title || '').trim()) {
+          errors.push(
+            'Falta el título en un elemento del Día ' +
+            importDay.day_number + '.'
+          )
+          return
+        }
+
+        previewItems.push({
+          ...importItem,
+          key,
+          linkedActivity,
+        })
+      })
+
+      previewDays.push({
+        ...importDay,
+        targetDay,
+        items: previewItems,
+      })
+    })
+
+    if (errors.length > 0) {
+      setImportError(errors.join(' '))
+      return
+    }
+
+    const keys = previewDays.flatMap((previewDay) =>
+      previewDay.items.map((item) => item.key)
+    )
+
+    setImportPreview({ days: previewDays })
+    setImportSelectedKeys(keys)
+  }
+
+  function toggleImportItem(key) {
+    setImportSelectedKeys((current) =>
+      current.includes(key)
+        ? current.filter((itemKey) => itemKey !== key)
+        : [...current, key]
+    )
+  }
+
+  async function importSelectedProposal() {
+    if (!importPreview || importingProposal) {
+      return
+    }
+
+    setImportingProposal(true)
+    setImportError('')
+    setImportSuccess('')
+
+    let importedCount = 0
+
+    for (const previewDay of importPreview.days) {
+      const selectedItems = previewDay.items.filter((item) =>
+        importSelectedKeys.includes(item.key)
+      )
+
+      if (selectedItems.length === 0) {
+        continue
+      }
+
+      const existingResult = await supabase
+        .from('itinerary_items')
+        .select('id')
+        .eq('day_id', previewDay.targetDay.id)
+
+      if (existingResult.error) {
+        setImportError(
+          'No se pudo preparar el Día ' +
+          previewDay.targetDay.day_number + '.'
+        )
+        setImportingProposal(false)
+        return
+      }
+
+      const basePosition = (existingResult.data || []).length
+      const rows = selectedItems.map((item, index) => {
+        const isActivity = item.type === 'activity'
+        const linkedActivity = item.linkedActivity
+
+        return {
+          day_id: previewDay.targetDay.id,
+          activity_id: isActivity ? linkedActivity.id : null,
+          item_type: isActivity
+            ? 'activity'
+            : item.type === 'transport'
+              ? 'transport'
+              : 'manual',
+          start_time: item.start_time || null,
+          end_time: item.end_time || null,
+          title: isActivity
+            ? linkedActivity.name
+            : String(item.title || '').trim(),
+          description: String(item.description || '').trim(),
+          link: isActivity ? linkedActivity.link || '' : '',
+          maps_name: isActivity
+            ? linkedActivity.maps_name || ''
+            : String(item.maps_name || '').trim(),
+          reserved: false,
+          paid: false,
+          position: basePosition + index,
+        }
+      })
+
+      const insertResult = await supabase
+        .from('itinerary_items')
+        .insert(rows)
+        .select()
+
+      if (insertResult.error) {
+        console.error('Error de importación:', insertResult.error)
+        setImportError(
+          'No se pudo importar el Día ' +
+          previewDay.targetDay.day_number + ': ' +
+          insertResult.error.message
+        )
+        setImportingProposal(false)
+        return
+      }
+
+      importedCount += (insertResult.data || []).length
+    }
+
+    setImportingProposal(false)
+    setImportSuccess(
+      '✓ ' + importedCount +
+      (importedCount === 1
+        ? ' elemento añadido.'
+        : ' elementos añadidos.')
+    )
+    await loadInformation()
   }
 
   if (loadingItems) {
@@ -2127,6 +2446,14 @@ function DayItems({ day }) {
         >
           ✨ Generar prompt
         </button>
+
+        <button
+          className="day-import-button"
+          type="button"
+          onClick={openImportProposal}
+        >
+          📥 Importar propuesta
+        </button>
       </div>
 
       {!showNewItemForm && (
@@ -2256,6 +2583,164 @@ function DayItems({ day }) {
                   }}
                 >
                   Cambiar alcance o preferencias
+                </button>
+              </div>
+            )}
+          </article>
+        </div>
+      )}
+
+      {showImportProposal && (
+        <div
+          className="compact-panel-backdrop"
+          role="presentation"
+          onClick={closeImportProposal}
+        >
+          <article
+            className="compact-panel import-proposal-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="import-proposal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              className="compact-panel-close"
+              type="button"
+              onClick={closeImportProposal}
+              aria-label="Cerrar importación"
+            >
+              ×
+            </button>
+
+            <span className="compact-panel-icon">📥</span>
+            <p className="section-label">IMPORTAR PROPUESTA</p>
+            <h2 id="import-proposal-title">
+              Llevar la propuesta al itinerario
+            </h2>
+
+            {!importPreview ? (
+              <div className="import-proposal-form">
+                <p>
+                  Copia el bloque JSON generado por la IA y pégalo aquí.
+                  También puedes pegar la respuesta completa.
+                </p>
+
+                <button
+                  className="paste-import-button"
+                  type="button"
+                  onClick={pasteImportText}
+                >
+                  📋 Pegar desde el portapapeles
+                </button>
+
+                <textarea
+                  value={importText}
+                  onChange={(event) =>
+                    setImportText(event.target.value)
+                  }
+                  placeholder="Pega aquí el bloque Japan26..."
+                  aria-label="Respuesta de la IA"
+                />
+
+                {importError && (
+                  <p className="import-proposal-error">
+                    {importError}
+                  </p>
+                )}
+
+                <button
+                  className="save-button"
+                  type="button"
+                  disabled={!importText.trim()}
+                  onClick={analyzeImportProposal}
+                >
+                  Analizar propuesta
+                </button>
+              </div>
+            ) : (
+              <div className="import-preview">
+                {importPreview.days.map((previewDay) => (
+                  <section key={previewDay.targetDay.id}>
+                    <h3>
+                      Día {previewDay.targetDay.day_number}
+                      {previewDay.title
+                        ? ' · ' + previewDay.title
+                        : ''}
+                    </h3>
+
+                    {previewDay.items.map((item) => {
+                      const title = item.linkedActivity
+                        ? item.linkedActivity.name
+                        : item.title
+                      return (
+                        <label
+                          className="import-preview-item"
+                          key={item.key}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={importSelectedKeys.includes(item.key)}
+                            onChange={() => toggleImportItem(item.key)}
+                          />
+                          <span>
+                            <strong>
+                              {item.start_time || 'Sin hora'} · {title}
+                            </strong>
+                            <small>
+                              {item.type === 'activity'
+                                ? 'Actividad existente'
+                                : item.type === 'transport'
+                                  ? 'Desplazamiento'
+                                  : 'Recomendación externa'}
+                            </small>
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </section>
+                ))}
+
+                {importError && (
+                  <p className="import-proposal-error">
+                    {importError}
+                  </p>
+                )}
+
+                {importSuccess && (
+                  <p className="import-proposal-success">
+                    {importSuccess}
+                  </p>
+                )}
+
+                {!importSuccess && (
+                  <button
+                    className="copy-prompt-button"
+                    type="button"
+                    disabled={
+                      importSelectedKeys.length === 0 ||
+                      importingProposal
+                    }
+                    onClick={importSelectedProposal}
+                  >
+                    {importingProposal
+                      ? 'Importando...'
+                      : 'Importar ' +
+                        importSelectedKeys.length +
+                        ' elementos'}
+                  </button>
+                )}
+
+                <button
+                  className="regenerate-prompt-button"
+                  type="button"
+                  disabled={importingProposal}
+                  onClick={() => {
+                    setImportPreview(null)
+                    setImportError('')
+                    setImportSuccess('')
+                  }}
+                >
+                  Volver al texto pegado
                 </button>
               </div>
             )}

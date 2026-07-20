@@ -5342,3 +5342,127 @@ GENERADOR DE PROMPTS
   text-decoration: underline;
   cursor: pointer;
 }
+
+
+/* =====================================================
+IMPORTAR PROPUESTAS DE IA
+===================================================== */
+.day-import-button {
+  min-height: 42px;
+  border: 1px solid #dfe2e7;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #4f5869;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.import-proposal-form,
+.import-preview {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.import-proposal-form > p {
+  margin: 0;
+  color: #687181;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.paste-import-button {
+  min-height: 42px;
+  border: 1px solid #dfe2e7;
+  border-radius: 11px;
+  background: #f0f1f4;
+  color: #4f5869;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.import-proposal-form textarea {
+  width: 100%;
+  min-height: 220px;
+  padding: 12px;
+  border: 1px solid #dfe1e6;
+  border-radius: 12px;
+  outline: none;
+  background: #ffffff;
+  color: #172033;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.import-proposal-error,
+.import-proposal-success {
+  margin: 0;
+  padding: 11px 12px;
+  border-radius: 11px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.import-proposal-error {
+  background: #fff0f2;
+  color: #bd5362;
+}
+
+.import-proposal-success {
+  background: #eaf8ef;
+  color: #28754a;
+}
+
+.import-preview section {
+  display: grid;
+  gap: 8px;
+}
+
+.import-preview h3 {
+  margin: 0 0 3px;
+  color: #172033;
+  font-size: 14px;
+}
+
+.import-preview-item {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 11px;
+  background: #f8f9fa;
+  cursor: pointer;
+}
+
+.import-preview-item input {
+  width: 17px;
+  height: 17px;
+  margin: 1px 0 0;
+  accent-color: #172033;
+}
+
+.import-preview-item span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.import-preview-item strong {
+  color: #172033;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.import-preview-item small {
+  color: #8a919f;
+  font-size: 9px;
+  font-weight: 700;
+}

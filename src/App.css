@@ -5492,6 +5492,7 @@ EDICION DE ACTIVIDADES EN VENTANA CENTRADA
   width: min(540px, calc(100vw - 32px));
   max-height: min(86vh, 760px);
   margin: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   transform: translate(-50%, -50%);
   border-color: #e2e4e8;
@@ -5499,16 +5500,6 @@ EDICION DE ACTIVIDADES EN VENTANA CENTRADA
   box-shadow: 0 24px 80px rgba(23, 32, 51, 0.28);
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-}
-
-.place-form.activity-edit-modal::before {
-  position: fixed;
-  z-index: -1;
-  inset: -100vh -100vw;
-  background: rgba(23, 32, 51, 0.52);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  content: '';
 }
 
 .place-form.activity-edit-modal .activity-form-heading {
@@ -5552,5 +5543,40 @@ EDICION DE ACTIVIDADES EN VENTANA CENTRADA
     margin: 2px -16px -20px;
     padding-bottom: max(0px, env(safe-area-inset-bottom));
     border-radius: 0;
+  }
+}
+
+
+/* Correccion visual del editor modal */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.place-form.activity-edit-modal,
+.place-form.activity-edit-modal label,
+.place-form.activity-edit-modal .form-grid {
+  min-width: 0;
+}
+
+.place-form.activity-edit-modal {
+  background: #ffffff !important;
+  color: #172033;
+  scrollbar-gutter: stable;
+}
+
+.place-form.activity-edit-modal input,
+.place-form.activity-edit-modal select,
+.place-form.activity-edit-modal textarea {
+  max-width: 100%;
+  background: #ffffff;
+}
+
+@media (max-width: 520px) {
+  .place-form.activity-edit-modal {
+    overflow-x: hidden;
+    scrollbar-gutter: auto;
+    box-shadow: 0 -18px 50px rgba(23, 32, 51, 0.18);
   }
 }

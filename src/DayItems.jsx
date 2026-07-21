@@ -2282,9 +2282,7 @@ function DayItems({ day }) {
             ? 'activity'
             : item.type === 'transport'
               ? 'transport'
-              : item.type === 'flexible_break'
-                ? 'break'
-                : 'manual',
+              : 'manual',
           start_time: startTime,
           end_time: endTime,
           title: isActivity

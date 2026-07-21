@@ -791,6 +791,8 @@ const [
       estimated_duration: durationValue
         ? Number(durationValue)
         : null,
+      reservation_needed:
+        formData.get('reservation_needed') === 'on',
     }
 
     setSavingActivity(true)
@@ -1537,6 +1539,23 @@ const [
                         placeholder="https://maps.google.com/..."
                       />
                     </label>
+                    <label className="reservation-needed-toggle">
+                      <span>
+                        <strong>Necesita reserva</strong>
+                        <small>
+                          Aparecerá en la pestaña Reservas
+                        </small>
+                      </span>
+
+                      <input
+                        name="reservation_needed"
+                        type="checkbox"
+                        defaultChecked={Boolean(
+                          editingActivity?.reservation_needed
+                        )}
+                      />
+                    </label>
+
                     <label>
                       Enlace de TikTok
 

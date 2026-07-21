@@ -1575,6 +1575,39 @@ function DayItems({ day }) {
     )
   }
 
+  function formatPromptReservation(activity) {
+    const statusLabels = {
+      pending: 'Pendiente de reservar',
+      reserved: 'Reservado',
+      not_available: 'No admite reserva',
+      checking: 'Por comprobar',
+      cancelled: 'Cancelado',
+    }
+    const details = [
+      'Fecha: ' + (activity.reservation_date || 'sin definir'),
+      activity.reservation_time
+        ? 'Hora: ' + String(activity.reservation_time).slice(0, 5)
+        : 'Hora: sin definir',
+      'Estado: ' +
+        (statusLabels[activity.reservation_status] || 'Pendiente de reservar'),
+      activity.reservation_people
+        ? 'Personas: ' + activity.reservation_people
+        : null,
+      activity.reservation_code
+        ? 'Código: ' + activity.reservation_code
+        : null,
+      activity.reservation_notes
+        ? 'Notas de reserva: ' + activity.reservation_notes
+        : null,
+    ].filter(Boolean)
+
+    return (
+      '- ' + activity.name +
+      '\n  ID de actividad: ' + activity.id +
+      '\n  ' + details.join('\n  ')
+    )
+  }
+
   function generatePlanningPrompt() {
     const orderedDays = [...itineraryDays].sort(
       (first, second) =>
@@ -1633,6 +1666,28 @@ function DayItems({ day }) {
     const cityActivities = activities.filter(
       (activity) => activity.city === day.city
     )
+    const selectedTravelDates = new Set(
+      selectedDays
+        .map((selectedDay) => selectedDay.travel_date)
+        .filter(Boolean)
+    )
+    const selectedReservations = cityActivities.filter(
+      (activity) =>
+        activity.reservation_needed &&
+        activity.reservation_date &&
+        selectedTravelDates.has(activity.reservation_date) &&
+        activity.reservation_status !== 'cancelled'
+    )
+    const selectedReservationIds = new Set(
+      selectedReservations.map((activity) => Number(activity.id))
+    )
+    const otherDatedReservations = cityActivities.filter(
+      (activity) =>
+        activity.reservation_needed &&
+        activity.reservation_date &&
+        !selectedTravelDates.has(activity.reservation_date) &&
+        activity.reservation_status !== 'cancelled'
+    )
     const completed = cityActivities.filter(
       (activity) =>
         activity.done ||
@@ -1652,7 +1707,9 @@ function DayItems({ day }) {
         )
     )
     const available = pending.filter(
-      (activity) => !assignedElsewhere.includes(activity)
+      (activity) =>
+        !assignedElsewhere.includes(activity) &&
+        !selectedReservationIds.has(Number(activity.id))
     )
     const previousExternalPlaces = previousItineraryItems
       .filter(
@@ -1715,6 +1772,25 @@ function DayItems({ day }) {
         sameCityFromCurrent.length,
       '- Días que debes organizar: ' + scopeLabel,
       '- Hoteles por noche:\n' + nights,
+      '',
+      'RESERVAS Y HORARIOS FIJOS DE LOS DÍAS SELECCIONADOS',
+      selectedReservations.length
+        ? selectedReservations.map(formatPromptReservation).join('\n')
+        : '- Ninguna reserva fechada para estos días',
+      '',
+      'OTRAS RESERVAS FECHADAS EN ESTA CIUDAD',
+      otherDatedReservations.length
+        ? otherDatedReservations.map(formatPromptReservation).join('\n')
+        : '- Ninguna',
+      '',
+      'REGLAS PARA RESERVAS FIJAS',
+      '- Una actividad con fecha de reserva en un día seleccionado es un ancla obligatoria del itinerario.',
+      '- Colócala exactamente en su fecha y respeta su hora cuando esté indicada.',
+      '- Organiza barrios, visitas, comida, pausas y desplazamientos alrededor de la reserva, incluyendo margen realista de llegada.',
+      '- No muevas, elimines ni sustituyas una reserva confirmada sin plantearlo como decisión material y explicar el conflicto.',
+      '- Si la reserva está pendiente pero tiene fecha u hora, trátala como condicionante provisional y señala que debe confirmarse.',
+      '- Si una reserva hace inviable otra actividad, marca esa actividad como MOVIDA, OPCIONAL, DESCARTADA o PENDIENTE DE RECOLOCAR.',
+      '- Antes del JSON comprueba que toda reserva fechada del día aparece en el itinerario y que ningún horario se solapa con ella.',
       '',
       'PREFERENCIAS',
       promptPreferences.length
@@ -1897,6 +1973,7 @@ function DayItems({ day }) {
       '- Oportunidades en ruta: lugares interesantes de paso, con desvío y tiempo sugerido, claramente separados del itinerario fijo.',
       '- Decisiones gastronómicas: una comida principal y una cena principal, con una alternativa opcional fuera del JSON.',
       '- MUST faltantes para revisar antes del JSON.',
+      '- Auditoría de reservas: confirma que cada reserva fechada aparece en su día, con hora compatible y margen de llegada.',
       '- Advertencias y comprobaciones necesarias.',
       '',
       'SELECCIÓN DE COMIDA Y CENA',
@@ -2002,7 +2079,7 @@ function DayItems({ day }) {
       'En el JSON conserva estos códigos técnicos para que Japan26 pueda importarlos: morning_coffee, mid_morning_coffee, beer_stop, lunch, afternoon_coffee, pre_dinner_drink, dinner y after_dinner_drink.',
       'En el texto visible tradúcelos como Café al salir, Café de media mañana, Parada para tomar algo, Comida, Café post comida, Copa antes de cenar, Cena y Copa después de cenar.',
       'Antes de devolver el JSON valida obligatoriamente: 1) la Parada para tomar algo termina antes de la Comida; 2) la Comida empieza normalmente entre 14:00 y 15:00; 3) el Café post comida empieza después de la Comida; 4) no hay una visita principal entre Comida y Café post comida; 5) el Café post comida empieza como máximo a las 16:00; 6) el Café post comida es café o matcha real; 7) solo hay una comida y una cena principales.',
-      'Si falla cualquiera de estas comprobaciones, no generes el JSON: corrige y reconstruye primero el día completo.',
+      'Si falla cualquiera de estas comprobaciones, o falta una reserva fechada de los días seleccionados, no generes el JSON: corrige y reconstruye primero el día completo.',
       '- La ausencia de Parada para tomar algo no puede marcarse simplemente como correcta. Debe figurar como OMITIDA JUSTIFICADAMENTE con una razón objetiva concreta; en caso contrario, añade una pausa flexible antes de la Comida.',
       'Todas las horas deben usar HH:MM. Para una actividad que termina a medianoche usa 23:59, no 00:00, porque 00:00 se interpreta como anterior a una hora nocturna del mismo día. Incluye en items tanto las visitas como cada traslado, café, cerveza, comida, cena y copa.',
     ].filter((line) => line !== '')

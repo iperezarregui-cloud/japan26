@@ -5611,3 +5611,26 @@ body {
     grid-column: auto;
   }
 }
+
+/* Reservas de actividades y restaurantes */
+.reservation-needed-toggle {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 14px;
+  border: 1px solid #e3e5e9;
+  border-radius: 13px;
+  background: #fff;
+}
+.reservation-needed-toggle span { display: grid; gap: 2px; }
+.reservation-needed-toggle small { color: #7a8290; font-size: 10px; font-weight: 600; }
+.reservation-needed-toggle input { width: 20px; min-height: 20px; accent-color: #e84f5f; }
+.reservation-modal-backdrop { position: fixed; z-index: 1800; inset: 0; display: grid; place-items: center; padding: 18px; background: rgba(23,32,51,.35); }
+.reservation-activity-modal { display: grid; gap: 14px; width: min(560px, 100%); max-height: 88vh; overflow-y: auto; padding: 20px; border-radius: 20px; background: #fff; box-shadow: 0 24px 80px rgba(23,32,51,.25); }
+.reservation-activity-modal label { display: grid; gap: 7px; color: #4f5869; font-size: 12px; font-weight: 800; }
+.reservation-activity-modal input, .reservation-activity-modal select, .reservation-activity-modal textarea { width: 100%; min-height: 44px; padding: 10px 13px; border: 1px solid #dfe1e6; border-radius: 12px; background: #fff; color: #172033; font: inherit; }
+.reservation-activity-modal .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.reservation-activity-modal .reservation-checkbox { display: flex; align-items: center; grid-template-columns: auto 1fr; }
+.reservation-activity-modal .reservation-checkbox input { width: 18px; min-height: 18px; accent-color: #e84f5f; }
+@media (max-width: 560px) { .reservation-activity-modal .form-grid { grid-template-columns: 1fr; } }

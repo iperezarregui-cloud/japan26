@@ -76,6 +76,8 @@ function Reservations({
   const [hotels, setHotels] = useState([])
   const [transports, setTransports] =
     useState([])
+  const [activities, setActivities] =
+    useState([])
   const [days, setDays] = useState([])
 
   const [loading, setLoading] =
@@ -91,6 +93,8 @@ function Reservations({
 
   const [errorMessage, setErrorMessage] =
     useState('')
+  const [editingActivity, setEditingActivity] =
+    useState(null)
 
   useEffect(() => {
     loadReservations()
@@ -118,19 +122,34 @@ function Reservations({
         (transport) => !transport.paid
       ).length
 
+    const activityReservationPending =
+      activities.filter(
+        (activity) =>
+          activity.reservation_status !== 'reserved'
+      ).length
+
+    const activityPaymentPending =
+      activities.filter(
+        (activity) => !activity.reservation_paid
+      ).length
+
     return {
       hotelReservationPending,
       hotelPaymentPending,
       transportReservationPending,
       transportPaymentPending,
+      activityReservationPending,
+      activityPaymentPending,
       totalReservationPending:
         hotelReservationPending +
-        transportReservationPending,
+        transportReservationPending +
+        activityReservationPending,
       totalPaymentPending:
         hotelPaymentPending +
-        transportPaymentPending,
+        transportPaymentPending +
+        activityPaymentPending,
     }
-  }, [hotels, transports])
+  }, [hotels, transports, activities])
 
   const visibleHotels = useMemo(() => {
     return [...hotels]
@@ -265,6 +284,52 @@ function Reservations({
     days,
   ])
 
+  const visibleActivities = useMemo(() => {
+    return [...activities]
+      .filter((activity) => {
+        const reserved =
+          activity.reservation_status === 'reserved'
+        const paid = Boolean(
+          activity.reservation_paid
+        )
+
+        if (reservationFilter === 'pending') {
+          return !reserved || !paid
+        }
+
+        if (reservationFilter === 'completed') {
+          return reserved && paid
+        }
+
+        return true
+      })
+      .sort((first, second) => {
+        const firstDate =
+          first.reservation_date || '9999-12-31'
+        const secondDate =
+          second.reservation_date || '9999-12-31'
+
+        if (firstDate !== secondDate) {
+          return firstDate.localeCompare(secondDate)
+        }
+
+        const firstTime =
+          first.reservation_time || '99:99:99'
+        const secondTime =
+          second.reservation_time || '99:99:99'
+
+        if (firstTime !== secondTime) {
+          return firstTime.localeCompare(secondTime)
+        }
+
+        return first.name.localeCompare(
+          second.name,
+          'es',
+          { sensitivity: 'base' }
+        )
+      })
+  }, [activities, reservationFilter])
+
   async function loadReservations() {
     setLoading(true)
     setErrorMessage('')
@@ -272,6 +337,7 @@ function Reservations({
     const [
       hotelsResult,
       transportsResult,
+      activitiesResult,
       daysResult,
     ] = await Promise.all([
       supabase
@@ -286,6 +352,11 @@ function Reservations({
         .from('itinerary_items')
         .select('*')
         .eq('item_type', 'transport'),
+
+      supabase
+        .from('activities')
+        .select('*')
+        .eq('reservation_needed', true),
 
       supabase
         .from('itinerary_days')
@@ -324,6 +395,21 @@ function Reservations({
     } else {
       setTransports(
         transportsResult.data || []
+      )
+    }
+
+    if (activitiesResult.error) {
+      console.error(
+        'Error al cargar actividades con reserva:',
+        activitiesResult.error
+      )
+
+      errors.push(
+        'No se pudieron cargar las actividades y restaurantes con reserva.'
+      )
+    } else {
+      setActivities(
+        activitiesResult.data || []
       )
     }
 
@@ -533,6 +619,81 @@ function Reservations({
     setUpdatingKey(null)
   }
 
+  async function saveActivityReservation(event) {
+    event.preventDefault()
+
+    if (!editingActivity || updatingKey !== null) {
+      return
+    }
+
+    const formData = new FormData(event.currentTarget)
+    const peopleValue = String(
+      formData.get('reservation_people') || ''
+    ).trim()
+    const depositValue = String(
+      formData.get('reservation_deposit') || ''
+    ).trim()
+
+    const changes = {
+      reservation_status: String(
+        formData.get('reservation_status') || 'pending'
+      ),
+      reservation_date:
+        String(formData.get('reservation_date') || '') || null,
+      reservation_time:
+        String(formData.get('reservation_time') || '') || null,
+      reservation_people: peopleValue
+        ? Number(peopleValue)
+        : null,
+      reservation_code:
+        String(formData.get('reservation_code') || '').trim() || null,
+      reservation_link:
+        String(formData.get('reservation_link') || '').trim() || null,
+      reservation_deposit: depositValue
+        ? Number(depositValue)
+        : null,
+      reservation_paid:
+        formData.get('reservation_paid') === 'on',
+      reservation_notes:
+        String(formData.get('reservation_notes') || '').trim() || null,
+    }
+
+    const updateKey =
+      'activity-' + editingActivity.id
+
+    setUpdatingKey(updateKey)
+    setErrorMessage('')
+
+    const result = await supabase
+      .from('activities')
+      .update(changes)
+      .eq('id', editingActivity.id)
+      .select()
+      .single()
+
+    if (result.error) {
+      console.error(
+        'Error al actualizar reserva:',
+        result.error
+      )
+      setErrorMessage(
+        'No se pudo actualizar la reserva: ' +
+          result.error.message
+      )
+    } else {
+      setActivities((currentActivities) =>
+        currentActivities.map((activity) =>
+          activity.id === editingActivity.id
+            ? result.data
+            : activity
+        )
+      )
+      setEditingActivity(null)
+    }
+
+    setUpdatingKey(null)
+  }
+
   if (loading) {
     return (
       <section className="content">
@@ -544,8 +705,8 @@ function Reservations({
           </h2>
 
           <p>
-            Recuperando hoteles y
-            transportes.
+            Recuperando hoteles, transportes,
+            actividades y restaurantes.
           </p>
         </article>
       </section>
@@ -563,8 +724,8 @@ function Reservations({
           <h2>Reservas</h2>
 
           <p>
-            Comprueba hoteles, transportes
-            y pagos pendientes.
+            Comprueba hoteles, transportes,
+            actividades, restaurantes y pagos.
           </p>
         </div>
 
@@ -631,6 +792,23 @@ function Reservations({
               {
                 summary.transportPaymentPending
               }{' '}
+              pendientes de pago
+            </small>
+          </div>
+        </article>
+
+        <article className="reservation-summary-card">
+          <span className="reservation-summary-icon">
+            🎟️
+          </span>
+          <div>
+            <span>ACTIVIDADES Y RESTAURANTES</span>
+            <strong>
+              {summary.activityReservationPending}{' '}
+              pendientes de reservar
+            </strong>
+            <small>
+              {summary.activityPaymentPending}{' '}
               pendientes de pago
             </small>
           </div>
@@ -709,6 +887,146 @@ function Reservations({
           Completados
         </button>
       </div>
+
+      <section className="reservation-group">
+        <div className="reservation-group-heading">
+          <div>
+            <p className="section-label">
+              ACTIVIDADES Y RESTAURANTES
+            </p>
+            <h3>Experiencias con reserva</h3>
+          </div>
+          <span>{visibleActivities.length}</span>
+        </div>
+
+        {visibleActivities.length === 0 ? (
+          <article className="reservation-empty">
+            <span>🎟️</span>
+            <div>
+              <h4>No hay actividades en este filtro</h4>
+              <p>
+                Activa Necesita reserva desde Ver y hacer
+                o Comer y beber.
+              </p>
+            </div>
+          </article>
+        ) : (
+          <div className="reservation-list">
+            {visibleActivities.map((activity) => {
+              const city = getCity(activity.city)
+              const reservationDate = formatDate(
+                activity.reservation_date
+              )
+              const reservationTime = formatTime(
+                activity.reservation_time
+              )
+              const isReserved =
+                activity.reservation_status === 'reserved'
+
+              return (
+                <article
+                  className="reservation-item"
+                  key={'activity-' + activity.id}
+                >
+                  <span className="reservation-item-icon">
+                    {activity.item_type === 'food' ? '🍽️' : '🎟️'}
+                  </span>
+                  <div className="reservation-item-content">
+                    <div className="reservation-item-heading">
+                      <div>
+                        <span>
+                          {city.emoji} {city.name} ·{' '}
+                          {activity.item_type === 'food'
+                            ? 'Comer y beber'
+                            : 'Ver y hacer'}
+                        </span>
+                        <h4>{activity.name}</h4>
+                      </div>
+                      <button
+                        className="reservation-open-button"
+                        type="button"
+                        onClick={() =>
+                          setEditingActivity(activity)
+                        }
+                      >
+                        Editar reserva
+                      </button>
+                    </div>
+
+                    <p className="reservation-item-detail">
+                      {reservationDate || 'Fecha sin definir'}
+                      {reservationTime
+                        ? ' · ' + reservationTime
+                        : ''}
+                      {activity.reservation_people
+                        ? ' · ' +
+                          activity.reservation_people +
+                          ' personas'
+                        : ''}
+                    </p>
+
+                    <div className="reservation-status-actions">
+                      <span
+                        className={
+                          isReserved
+                            ? 'reservation-status selected'
+                            : 'reservation-status'
+                        }
+                      >
+                        {isReserved
+                          ? '✓ Reservado'
+                          : activity.reservation_status === 'not_available'
+                            ? 'Sin reserva'
+                            : activity.reservation_status === 'cancelled'
+                              ? 'Cancelado'
+                              : activity.reservation_status === 'checking'
+                                ? 'Por comprobar'
+                                : '○ Pendiente de reservar'}
+                      </span>
+                      <span
+                        className={
+                          activity.reservation_paid
+                            ? 'reservation-status paid selected'
+                            : 'reservation-status paid'
+                        }
+                      >
+                        {activity.reservation_paid
+                          ? '✓ Pagado'
+                          : '○ Pendiente de pago'}
+                      </span>
+                    </div>
+
+                    <div className="reservation-item-links">
+                      {activity.reservation_link && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openExternalLink(
+                              activity.reservation_link
+                            )
+                          }
+                        >
+                          Abrir reserva
+                        </button>
+                      )}
+                      {activity.link && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openExternalLink(activity.link)
+                          }
+                        >
+                          Google Maps
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        )}
+      </section>
 
       <section className="reservation-group">
         <div className="reservation-group-heading">
@@ -1078,6 +1396,140 @@ function Reservations({
           </div>
         )}
       </section>
+      {editingActivity && (
+        <div
+          className="reservation-modal-backdrop"
+          onMouseDown={() => setEditingActivity(null)}
+        >
+          <form
+            className="reservation-activity-modal"
+            onSubmit={saveActivityReservation}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="activity-form-heading">
+              <div>
+                <p className="section-label">RESERVA</p>
+                <h3>{editingActivity.name}</h3>
+              </div>
+              <button
+                className="form-close-button"
+                type="button"
+                onClick={() => setEditingActivity(null)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="form-grid">
+              <label>
+                Estado
+                <select
+                  name="reservation_status"
+                  defaultValue={
+                    editingActivity.reservation_status || 'pending'
+                  }
+                >
+                  <option value="pending">Pendiente de reservar</option>
+                  <option value="reserved">Reservado</option>
+                  <option value="not_available">No admite reserva</option>
+                  <option value="checking">Por comprobar</option>
+                  <option value="cancelled">Cancelado</option>
+                </select>
+              </label>
+              <label>
+                Personas
+                <input
+                  name="reservation_people"
+                  type="number"
+                  min="1"
+                  defaultValue={
+                    editingActivity.reservation_people || ''
+                  }
+                />
+              </label>
+              <label>
+                Fecha
+                <input
+                  name="reservation_date"
+                  type="date"
+                  defaultValue={
+                    editingActivity.reservation_date || ''
+                  }
+                />
+              </label>
+              <label>
+                Hora
+                <input
+                  name="reservation_time"
+                  type="time"
+                  defaultValue={
+                    formatTime(editingActivity.reservation_time) || ''
+                  }
+                />
+              </label>
+            </div>
+
+            <label>
+              Código de confirmación
+              <input
+                name="reservation_code"
+                defaultValue={
+                  editingActivity.reservation_code || ''
+                }
+              />
+            </label>
+            <label>
+              Enlace de reserva
+              <input
+                name="reservation_link"
+                type="url"
+                defaultValue={
+                  editingActivity.reservation_link || ''
+                }
+              />
+            </label>
+            <label>
+              Depósito o importe pagado
+              <input
+                name="reservation_deposit"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={
+                  editingActivity.reservation_deposit || ''
+                }
+              />
+            </label>
+            <label className="reservation-checkbox">
+              <input
+                name="reservation_paid"
+                type="checkbox"
+                defaultChecked={Boolean(
+                  editingActivity.reservation_paid
+                )}
+              />
+              Pago completado
+            </label>
+            <label>
+              Notas
+              <textarea
+                name="reservation_notes"
+                rows="3"
+                defaultValue={
+                  editingActivity.reservation_notes || ''
+                }
+              />
+            </label>
+            <button
+              className="save-button"
+              type="submit"
+              disabled={updatingKey !== null}
+            >
+              Guardar reserva
+            </button>
+          </form>
+        </div>
+      )}
     </section>
   )
 }

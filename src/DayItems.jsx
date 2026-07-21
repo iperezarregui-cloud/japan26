@@ -1406,7 +1406,9 @@ function DayItems({ day }) {
     getPreviousDate(day.travel_date)
   )
 
-  function openDayRoute() {
+  const MAX_GOOGLE_MAPS_ROUTE_POINTS = 10
+
+  function getDayRoutePoints() {
     const routePoints = []
 
     if (previousNightHotel?.maps_name) {
@@ -1431,30 +1433,38 @@ function DayItems({ day }) {
       routePoints.push(nightHotel.maps_name)
     }
 
-    const cleanPoints = routePoints
+    return routePoints
       .map((point) => String(point).trim())
       .filter(Boolean)
+      .filter(
+        (point, index, points) =>
+          index === 0 ||
+          point.toLowerCase() !==
+            points[index - 1].toLowerCase()
+      )
+  }
 
-    if (cleanPoints.length === 0) {
+  function openRoutePoints(routePoints) {
+    if (routePoints.length === 0) {
       setErrorMessage(
         'No hay puntos con nombre de Google Maps para crear la ruta.'
       )
       return
     }
 
-    if (cleanPoints.length === 1) {
+    if (routePoints.length === 1) {
       const searchUrl =
         'https://www.google.com/maps/search/?api=1&query=' +
-        encodeURIComponent(cleanPoints[0])
+        encodeURIComponent(routePoints[0])
 
       openExternalLink(searchUrl)
       return
     }
 
-    const origin = cleanPoints[0]
+    const origin = routePoints[0]
     const destination =
-      cleanPoints[cleanPoints.length - 1]
-    const waypoints = cleanPoints.slice(1, -1)
+      routePoints[routePoints.length - 1]
+    const waypoints = routePoints.slice(1, -1)
 
     let routeUrl =
       'https://www.google.com/maps/dir/?api=1' +
@@ -1472,6 +1482,31 @@ function DayItems({ day }) {
     }
 
     openExternalLink(routeUrl)
+  }
+
+  const dayRoutePoints = getDayRoutePoints()
+  const shouldSplitDayRoute =
+    dayRoutePoints.length > MAX_GOOGLE_MAPS_ROUTE_POINTS
+  const routeSplitIndex = shouldSplitDayRoute
+    ? Math.ceil(dayRoutePoints.length / 2) - 1
+    : -1
+  const morningRoutePoints = shouldSplitDayRoute
+    ? dayRoutePoints.slice(0, routeSplitIndex + 1)
+    : dayRoutePoints
+  const afternoonRoutePoints = shouldSplitDayRoute
+    ? dayRoutePoints.slice(routeSplitIndex)
+    : []
+
+  function openDayRoute() {
+    openRoutePoints(dayRoutePoints)
+  }
+
+  function openMorningRoute() {
+    openRoutePoints(morningRoutePoints)
+  }
+
+  function openAfternoonRoute() {
+    openRoutePoints(afternoonRoutePoints)
   }
 
   const promptPreferenceOptions = [
@@ -2532,13 +2567,37 @@ function DayItems({ day }) {
           </button>
         )}
 
-        <button
-          className="day-route-button"
-          type="button"
-          onClick={openDayRoute}
-        >
-          🗺️ Ruta del día
-        </button>
+        {!shouldSplitDayRoute ? (
+          <button
+            className="day-route-button"
+            type="button"
+            onClick={openDayRoute}
+          >
+            🗺️ Ruta del día
+          </button>
+        ) : (
+          <div className="split-route-buttons">
+            <p>
+              Día dividido en dos rutas por el número de paradas.
+            </p>
+
+            <button
+              className="day-route-button"
+              type="button"
+              onClick={openMorningRoute}
+            >
+              ☀️ Ruta de mañana
+            </button>
+
+            <button
+              className="day-route-button afternoon"
+              type="button"
+              onClick={openAfternoonRoute}
+            >
+              🌆 Ruta de tarde
+            </button>
+          </div>
+        )}
 
         <button
           className="day-prompt-button"

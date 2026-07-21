@@ -1754,10 +1754,15 @@ function DayItems({ day }) {
       'NUESTRO RITMO DE VIAJE',
       '- No nos importa madrugar y nos gusta caminar bastante durante la mañana.',
       '- Lo primero al salir del hotel debe ser tomar un café. Prioriza un café guardado cerca del hotel o de la primera visita; si no existe, recomienda uno cercano y márcalo como recomendación externa.',
-      '- A media mañana queremos normalmente un segundo café, integrado en la ruta y sin crear un desvío importante.',
-      '- Entre las 12:00 y las 13:00 queremos una primera cerveza o una parada agradable en un sitio curioso, cómodo o con ambiente. Esta parada no es la comida.',
-      '- Después de esa primera cerveza podemos pasear, visitar algo cercano o desplazarnos ligeramente hasta la comida.',
-      '- Comemos con horario español, normalmente entre las 14:00 y las 15:00. Prioriza uno de los sitios guardados de Comer y beber que encaje con la zona y el recorrido.',
+      '- A media mañana queremos normalmente un segundo café, integrado en la ruta y sin crear un desvío importante. Es opcional si no encaja de forma natural.',
+      '- No encadenes pausas como una checklist: entre un café y la primera cerveza debe haber normalmente visitas, paseo y al menos 90 minutos, salvo una razón excepcional.',
+      '- Entre las 12:00 y las 13:00 nos suele apetecer una primera cerveza o una parada agradable, pero es una preferencia flexible, no una obligación ni un destino.',
+      '- Nunca alteres la dirección del recorrido, adelantes la visita a un barrio posterior o provoques un retroceso para encontrar una cervecería concreta.',
+      '- Si hay un bar, izakaya, terraza o local agradable que encaja naturalmente, inclúyelo. Si no, crea una pausa flexible para buscar algo sobre la marcha por la zona, sin establecimiento concreto, sin maps_name y sin desplazamiento específico.',
+      '- También puedes retrasar u omitir la cerveza si el ritmo y la geografía del día lo aconsejan.',
+      '- Comemos con horario español, normalmente entre las 14:00 y las 15:00. Entre los sitios guardados que encajen, elige solo una opción principal para comer y como máximo una alternativa que no debe entrar en el JSON.',
+      '- Para cenar elige solo una opción principal y como máximo una alternativa. No intentes incluir varios restaurantes guardados del mismo barrio solo porque estén disponibles.',
+      '- Explica por qué eliges cada comida y cena según prioridad, recorrido, horario, tipo de experiencia, reserva y redundancia con el resto del viaje.',
       '- Después de comer queremos café, paseo y más visitas, preferiblemente de intensidad moderada al principio de la tarde.',
       '- Si existe margen real y el hotel queda razonablemente conectado, valora volver al hotel para descansar, ducharnos y cambiarnos antes de salir de noche. No fuerces esta vuelta si rompe la ruta.',
       '- Casi todas las noches queremos una zona animada o agradable, tomar algo antes de cenar, una cena interesante o especial con horario español y después otra copa o un paseo nocturno.',
@@ -1767,6 +1772,8 @@ function DayItems({ day }) {
       '- Para las pausas de café y cerveza, prioriza ante todo establecimientos agradables y situados de forma natural en el recorrido.',
       '- Una cafetería moderna o trendy, de especialidad o con buen matcha es un plus, no un requisito ni un destino obligatorio.',
       '- Si hay varias cafeterías cercanas y equivalentes, usa café de especialidad o buen matcha como criterio de desempate. No organices cada parada de café alrededor de estas preferencias.',
+      '- Excepción para Laia: si existe un establecimiento realmente especializado en matcha situado directamente en la ruta o con un desvío de hasta 5 minutos, inclúyelo con prioridad y úsalo en lugar de una de las pausas de café, no como una parada adicional consecutiva.',
+      '- Si el especialista en matcha exige 10 minutos o más de desvío, menciónalo como oportunidad para otro momento o día, pero no alteres automáticamente la ruta.',
       '- Para cerveza, cualquier bar, izakaya, terraza o local agradable y bien situado es válido.',
       '- La cerveza artesanal, especialmente IPAs y ales, y los taprooms o brewpubs son un plus si aparecen de forma natural en la ruta, no una obligación diaria.',
       '- Una terraza o espacio exterior suma puntos tanto para café como para cerveza, pero nunca debe justificar por sí solo un desplazamiento.',
@@ -1774,6 +1781,27 @@ function DayItems({ day }) {
       '- Si la parada no está guardada y una opción especial exige desviarse, elige una cafetería normal agradable o un bar cualquiera situado en la ruta.',
       '- En cada recomendación externa indica: nombre exacto, tipo de local, por qué encaja, desvío estimado, si tiene terraza o exterior y qué información debe comprobarse.',
       '- No inventes establecimientos. Si no puedes verificar que siguen abiertos, marca claramente el sitio como por comprobar.',
+      '',
+      'COHERENCIA GEOGRÁFICA Y PRUEBA ANTI-YOYÓ',
+      '- Diseña primero una dirección general predominantemente unidireccional y coloca después las pausas y establecimientos.',
+      '- Evalúa cada parada usando el trayecto completo parada anterior → parada propuesta → parada siguiente, no solo la distancia desde la parada anterior.',
+      '- Compara ese trayecto con ir directamente de la parada anterior a la siguiente y calcula el desvío adicional real.',
+      '- No bajes a una zona para después volver a subir, no cruces dos veces el mismo corredor y no visites prematuramente un barrio que ya está previsto para más tarde.',
+      '- Si un establecimiento está en una zona que se visitará después, resérvalo para cuando la ruta llegue naturalmente allí o escoge una alternativa cercana en la zona actual.',
+      '- Una buena recomendación colocada en un mal momento es una mala recomendación.',
+      '- Antes de cerrar el plan realiza una auditoría anti-yoyó y reordena o sustituye cualquier parada que cause retrocesos.',
+      '',
+      'CALIDAD DE LOS RECORRIDOS A PIE',
+      '- Cuando conecten naturalmente dos paradas, guía el paseo por callejones con ambiente, yokocho, shotengai, calles peatonales, canales, parques, calles comerciales locales o recorridos arquitectónicos interesantes.',
+      '- Si el recorrido interesante añade de 0 a 5 minutos, priorízalo; entre 5 y 10 minutos úsalo solo si aporta claramente valor; con más de 10 minutos no lo incluyas automáticamente.',
+      '- Integra estos rincones dentro de la línea de desplazamiento y no conviertas cada callejón en una actividad independiente.',
+      '- Indica el nombre concreto del callejón o calle, el tiempo total y el desvío adicional. No inventes conexiones ni tiempos.',
+      '',
+      'COBERTURA Y MUST FALTANTES',
+      '- Revisa si falta algún lugar verdaderamente imprescindible o muy representativo de la ciudad, barrio o zona seleccionada.',
+      '- No generes una lista turística genérica. Solo señala ausencias con valor claro, buen encaje geográfico, baja redundancia y compatibilidad con los días restantes.',
+      '- Clasifica cada sugerencia como MUST faltante, muy recomendable u opcional, y explica dónde encajaría, cuánto tiempo requiere y qué sustituirías si el día ya está lleno.',
+      '- No incluyas automáticamente un MUST faltante en el JSON: preséntalo primero para que el usuario decida.',
       '',
       'CRITERIO Y REDUNDANCIAS',
       '- No intentes incluir todas las actividades pendientes ni maximizar el número de paradas.',
@@ -1819,7 +1847,15 @@ function DayItems({ day }) {
       '- Solapamientos y descartes: actividades redundantes o de poco valor adicional que no incluirías.',
       '- Recomendaciones externas claramente marcadas como no guardadas en Japan26.',
       '- Para cada recomendación externa: nombre exacto, tipo, motivo geográfico y experiencial, desvío estimado, terraza o exterior y datos por comprobar.',
+      '- Auditoría anti-yoyó: dirección general, retrocesos detectados y paradas recolocadas.',
+      '- Decisiones gastronómicas: una comida principal y una cena principal, con una alternativa opcional fuera del JSON.',
+      '- MUST faltantes para revisar antes del JSON.',
       '- Advertencias y comprobaciones necesarias.',
+      '',
+      'FASE DE DECISIÓN ANTES DEL JSON',
+      '- Si existen varias opciones razonables de comida o cena, MUST faltantes relevantes o recomendaciones externas dudosas, presenta primero tu recomendación y las alternativas y espera la elección del usuario antes de generar el JSON definitivo.',
+      '- Si el usuario ya ha indicado que puedes decidir, elige tú, explica brevemente la decisión e incluye solo una comida y una cena en el JSON.',
+      '- Nunca metas en el JSON las alternativas de respaldo, los MUST aún no aprobados ni recomendaciones geográficas no verificadas.',
       '',
       'REGLAS PARA RECOMENDACIONES EXTERNAS',
       '- No incluyas una recomendación externa en el plan principal sin comprobar su encaje entre la parada anterior y la siguiente.',
@@ -1829,7 +1865,9 @@ function DayItems({ day }) {
       '- Una recomendación con geography_verified false puede aparecer como opción, pero no debe presentarse como parada fiable ni usar tiempos exactos inventados.',
       '- No afirmes que un trayecto dura 10 o 15 minutos si no lo has comprobado.',
       '- Si dos paradas consecutivas ocurren en el mismo establecimiento, fusiónalas en una sola parada con un único intervalo horario.',
-      '- Si no existe una opción externa fiable, crea una pausa flexible por la zona sin destino concreto y sin maps_name.',
+      '- No generes una recomendación externa únicamente para cumplir el patrón de cerveza antes de comer.',
+      '- Si no existe una opción externa fiable, crea una pausa flexible con type flexible_break, sin destino concreto, sin maps_name y sin desplazamiento específico.',
+      '- Para una pausa flexible de cerveza usa role beer_stop y un título como Buscar un sitio para tomar algo por la zona.',
       '',
       'BLOQUE IMPORTABLE PARA JAPAN26',
       'Al final de la respuesta incluye un único bloque de código JSON válido y después no escribas nada más.',
@@ -1846,12 +1884,13 @@ function DayItems({ day }) {
       '      \"items\": [',
       '        { \"type\": \"activity\", \"activity_id\": 123, \"start_time\": \"09:00\", \"end_time\": \"10:30\" },',
       '        { \"type\": \"transport\", \"start_time\": \"10:30\", \"end_time\": \"10:50\", \"title\": \"Traslado a la siguiente zona\", \"description\": \"15 min en metro y 5 min andando\" },',
-      '        { \"type\": \"external\", \"start_time\": \"10:50\", \"end_time\": \"11:30\", \"title\": \"Nombre exacto del local\", \"description\": \"Recomendación externa y motivo\", \"maps_name\": \"Nombre exacto en Google Maps\", \"previous_stop\": \"Parada anterior\", \"next_stop\": \"Parada siguiente\", \"travel_from_previous_minutes\": 10, \"travel_to_next_minutes\": 8, \"detour_minutes\": 5, \"transport_mode\": \"walking\", \"geography_verified\": true, \"verification_note\": \"Ruta y horario comprobados\" }',
+      '        { \"type\": \"flexible_break\", \"role\": \"beer_stop\", \"start_time\": \"12:30\", \"end_time\": \"13:15\", \"title\": \"Buscar un sitio para tomar algo por la zona\", \"description\": \"Elegir sobre la marcha un bar, izakaya o terraza sin desviarse\" },',
+      '        { \"type\": \"external\", \"role\": \"lunch\", \"start_time\": \"14:00\", \"end_time\": \"15:15\", \"title\": \"Nombre exacto del local\", \"description\": \"Recomendación externa y motivo\", \"maps_name\": \"Nombre exacto en Google Maps\", \"previous_stop\": \"Parada anterior\", \"next_stop\": \"Parada siguiente\", \"travel_from_previous_minutes\": 10, \"travel_to_next_minutes\": 8, \"detour_minutes\": 5, \"transport_mode\": \"walking\", \"route_direction\": \"Zona A → Zona B\", \"causes_backtracking\": false, \"geography_verified\": true, \"verification_note\": \"Ruta y horario comprobados\" }',
       '      ]',
       '    }',
       '  ]',
       '}',
-      'Para actividades existentes usa type activity y activity_id. Para traslados usa type transport. Para recomendaciones externas usa type external e incluye siempre geography_verified, previous_stop, next_stop, detour_minutes y verification_note.',
+      'Para actividades existentes usa type activity y activity_id. Para traslados usa type transport. Para pausas sin local concreto usa type flexible_break y role. Para recomendaciones externas usa type external e incluye siempre role, geography_verified, previous_stop, next_stop, detour_minutes, route_direction, causes_backtracking y verification_note.',
       'Todas las horas deben usar HH:MM. Para una actividad que termina a medianoche usa 23:59, no 00:00, porque 00:00 se interpreta como anterior a una hora nocturna del mismo día. Incluye en items tanto las visitas como cada traslado, café, cerveza, comida, cena y copa.',
     ].filter((line) => line !== '')
 
@@ -1993,7 +2032,7 @@ function DayItems({ day }) {
       importDay.items.forEach((importItem, itemIndex) => {
         const key = dayIndex + '-' + itemIndex
         const type = String(importItem.type || '')
-        if (!['activity', 'transport', 'external'].includes(type)) {
+        if (!['activity', 'transport', 'external', 'flexible_break'].includes(type)) {
           errors.push(
             'Tipo no válido en el Día ' +
             importDay.day_number + ': ' + type
@@ -2035,7 +2074,8 @@ function DayItems({ day }) {
 
         const geographyVerified =
           type !== 'external' ||
-          importItem.geography_verified === true
+          (importItem.geography_verified === true &&
+            importItem.causes_backtracking !== true)
 
         previewItems.push({
           ...importItem,
@@ -2129,7 +2169,9 @@ function DayItems({ day }) {
             ? 'activity'
             : item.type === 'transport'
               ? 'transport'
-              : 'manual',
+              : item.type === 'flexible_break'
+                ? 'break'
+                : 'manual',
           start_time: startTime,
           end_time: endTime,
           title: isActivity
@@ -2851,9 +2893,11 @@ function DayItems({ day }) {
                                 ? 'Actividad existente'
                                 : item.type === 'transport'
                                   ? 'Desplazamiento'
-                                  : item.geographyVerified
-                                    ? 'Recomendación externa · geografía verificada'
-                                    : '⚠ Recomendación externa · por comprobar'}
+                                  : item.type === 'flexible_break'
+                                    ? 'Pausa flexible · sin destino fijo'
+                                    : item.geographyVerified
+                                      ? 'Recomendación externa · geografía verificada'
+                                      : '⚠ Recomendación externa · por comprobar'}
                             </small>
                             {item.type === 'external' && (
                               <small>
